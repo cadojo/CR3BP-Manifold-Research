@@ -145,5 +145,4 @@ echo 'Fetching ephemeris for Pluto...'
 sed -n '/\$\$SOE/,/\$\$EOE/{//!p;}' Pluto.txt | sponge Pluto.txt
 awk -F , 'BEGIN {OFS=FS}  {$2=""; sub(",,", ","); print}' Pluto.txt | sponge Pluto.txt
 
-mv *.txt ../../data/exp_raw/ephemeris/
 echo 'All done!'
