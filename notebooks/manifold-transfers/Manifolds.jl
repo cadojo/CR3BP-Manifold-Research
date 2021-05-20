@@ -393,7 +393,8 @@ _Superhighways in ~space~._
 let system = EarthMoon
 	
 	orbit, T = halo(system; Az = 0.03, L = 1)
-	manifold = unstable_manifold(orbit, T; eps=1e-8, duration=3.3T, saveat=1e-2)
+	manifold = unstable_manifold(orbit, T; eps=1e-5, 
+								 num_trajectories = 100, duration=1T, saveat=1e-2)
 	
 	LU  = string(normalized_length_unit(orbit.system))
 	fig = plot(; palette = :rainbow, dpi = 200,
@@ -438,8 +439,8 @@ let
 
 	if mission_phase == "Phase One"
 		
-		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
-		manifold = stable_manifold(orbit, T; duration=1.5T, eps=-1e-9, saveat=1e-2)
+		orbit, T = halo(SunEarth; Az=50_000u"km", L=2)
+		manifold = stable_manifold(orbit, T; duration=T, eps=-1e-9, saveat=1e-2)
 		
 		LU  = (string ∘ normalized_length_unit)(orbit.system)
 		fig = plot(; title = "Phase #1: Earth to Sun-Earth Halo", 
@@ -1201,9 +1202,9 @@ end
 # ╟─a4538dea-2e55-42c6-8573-e77c75607e7c
 # ╠═fb847908-ee98-447e-ae03-23afd0b9d9e4
 # ╟─8786e7d8-9d78-4b7c-bd19-d221a471a32a
-# ╟─c850a977-9fab-4014-8887-6667e64e079a
+# ╠═c850a977-9fab-4014-8887-6667e64e079a
 # ╟─bd964ca0-534b-46b8-8538-d582186c1f94
-# ╟─88d150e7-609c-4a5f-a0fc-48cbae74b10b
+# ╠═88d150e7-609c-4a5f-a0fc-48cbae74b10b
 # ╟─d91d9336-b6e8-44b3-9c59-5db794faca6f
 # ╟─27f75a11-0d76-4e0b-a0e0-d7479e71483f
 # ╟─fc2c5ff7-b52f-4bad-8afc-1edbdd0c0d69

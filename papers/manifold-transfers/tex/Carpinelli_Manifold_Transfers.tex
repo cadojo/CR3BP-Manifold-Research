@@ -12,6 +12,9 @@
 \usepackage{lscape}
 \usepackage[ruled,vlined]{algorithm2e}
 
+\usepackage{fontspec}
+\setmonofont{Unifont}
+
 % From https://tex.stackexchange.com/questions/323297/
 \newcommand{\rvline}{\hspace*{-\arraycolsep}\vline\hspace*{-\arraycolsep}}
 
@@ -339,7 +342,7 @@ within some tolerance of zero.
     \overrightarrow{v}^{\star} &= \begin{bmatrix} 0 & \dot{y}_0 & 0 \end{bmatrix}
 \end{align}
 
-\subsubsection{Implementation used by Howell, Rund}
+\subsubsection*{Implementation used by Howell, Rund}
 Howell presents two options, as shown in equations $\left(22\right)$ and 
 $(23)$ \cite{howell1984three}. Equation $(22)$ iterates on the initial 
 $z_0$ and $\dot{y}_0$ conditions, and equation $(23)$ iterates on the initial 
@@ -378,7 +381,7 @@ and invariant manifold results in a 2018 MS thesis \cite{rund2018interplanetary}
 \end{aligned}
 \end{equation}
 
-\subsubsection{Implementation used by Barbee}
+\subsubsection*{Implementation used by Barbee}
 Barbee's Lyapunov orbit-finding MATLAB implementation uses a slightly 
 different approach. Rather than refine $x_0$ and $\dot{y}_0$, his implementation
 iterates on $\dot{y}_0$ and $\frac{T_0}{2}$ \cite{barbeeCode}. This approach 
@@ -415,7 +418,7 @@ Halo orbit computation, without relying on numerical integration
 termination conditions. Mireles provides one such implementation in 
 publicly available notes and code \cite{mirelesNotes} \cite{mirelesCode}.
 
-\subsubsection{Implementation used by Mireles}
+\subsubsection*{Implementation used by Mireles}
 Mireles' implementation iterates on \textit{three} initial conditions:
 $z_0$, $\dot{y}_0$, and $\frac{T_0}{2}$ \cite{mirelesNotes} \cite{mirelesCode}.
 This approach to initial condition correction is shown in equation $(25)$.
@@ -442,7 +445,7 @@ implementation is provided that corrects this issue.
     \end{aligned}
 \end{equation}
 
-\subsubsection{General Implementation}
+\subsubsection*{General Implementation}
 Recall that Howell presented two iteration options: one to refine $x_0$, and 
 another to refine $z_0$. We can use this approach in combination with Mireles'
 implementation to produce a general periodic orbit solver that works for both 
@@ -511,7 +514,8 @@ provides normalized mass parameter, Lagrange point to orbit, Jacobi constant,
 normalized $z$-axis amplitude, orbital period, and  
 normalized, Synodic Cartesian states. Periodic orbits were catalogued for 
 Sun-Venus, Sun-Earth, Earth-Moon, Sun-Mars, Sun-Jupiter, and Sun-Saturn CR3BP 
-systems. A fraction of the computed Halo orbits are provided \tablename{1}.
+systems. A fraction of the computed Halo orbits are provided in the Appendix, 
+\tablename{1}.
 
 A collection of periodic orbits can be computed with slightly varying 
 $z$-axis amplitudes; this can be referred to as a family of Halo orbits
@@ -528,49 +532,6 @@ manifolds within CR3BP dynamics. The remainder of this paper summarizes
 the existance of invariant manifolds, computational methods, 
 applications in mission design, and methods and associated challenges 
 in computing manifold-based interplanetary transfers. 
-
-\end{multicols}
-\newpage
-
-\begin{landscape}
-\begin{table}
-\begin{tabular}{cccccccc}
-    Mass Parameter & Lagrange Point & $Z$-Amplitude & Period & $x$ & $z$ & $\dot{y}$ \\
-    $0.012150584269940356$ & $1.0$ & $0.0$ & $2.7536820171259744$ & $0.8222791805122408$ & $0.0$ & $0.13799313179964737$\\
-    $0.012150584269940356$ & $1.0$ & $0.002$ & $2.7430279744649004$ & $0.8233905115990996$ & $0.0022207698036084363$ & $0.1264086161524851$\\
-    $0.012150584269940356$ & $1.0$ & $0.004$ & $2.743129618348479$ & $0.8233893741253737$ & $0.004442307958743803$ & $0.12665484442364439$\\
-    $0.012150584269940356$ & $1.0$ & $0.006$ & $2.743298907640046$ & $0.8233876253798795$ & $0.006665380456556792$ & $0.12706382260243482$\\
-    $0.012150584269940356$ & $1.0$ & $0.008$ & $2.7435356656350174$ & $0.8233854825357569$ & $0.008890748615484967$ & $0.12763347860600016$\\
-    $0.012150584269940356$ & $1.0$ & $0.01$ & $2.7438396430341294$ & $0.8233832430275673$ & $0.011119166862915583$ & $0.12836097250130557$\\
-    $0.012150584269940356$ & $2.0$ & $0.001999$ & $3.4154785217654346$ & $1.1203619239893596$ & $0.001835091590818184$ & $0.17611109647933998$\\
-    $3.003480593992993e-6$ & $1.0$ & $0.0$ & $3.057037166436106$ & $0.9889069589528534$ & $0.0$ & $0.008529372360506582$\\
-    $3.003480593992993e-6$ & $1.0$ & $0.002$ & $3.0562630985504198$ & $0.9889296115452058$ & $0.0022759531712711633$ & $0.009571654363317172$\\
-    $3.003480593992993e-6$ & $1.0$ & $0.004$ & $3.0408810610908192$ & $0.9891686188174361$ & $0.0046921863531775585$ & $0.011428450586881073$\\
-    $3.003480593992993e-6$ & $1.0$ & $0.006$ & $2.9968780486251165$ & $0.9897509664037121$ & $0.007350439066516196$ & $0.013571383652713521$\\
-    $3.003480593992993e-6$ & $1.0$ & $0.008$ & $2.8360875768267277$ & $0.9909674701532162$ & $0.010323704902503393$ & $0.015198885580121493$\\
-    $3.003480593992993e-6$ & $2.0$ & $0.001798$ & $3.09794993304811$ & $1.0080662252502852$ & $0.001672550237255738$ & $0.010798428273484711$\\
-    $3.003480593992993e-6$ & $2.0$ & $0.003798$ & $3.0755344619414036$ & $1.0068608443606484$ & $0.0035047324922114834$ & $0.014513397367974044$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0$ & $3.067790305289647$ & $0.9947153604918691$ & $0.0$ & $0.004052940170205446$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0001$ & $3.0713331541226148$ & $0.9946990969840135$ & $0.00011259909689815706$ & $0.00420141728779284$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0002$ & $3.071197879663506$ & $0.9946998314896827$ & $0.0002252842583036334$ & $0.004214196175484041$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0003$ & $3.0709713120763475$ & $0.9947010768650656$ & $0.00033814100956578$ & $0.004235364341723893$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0004$ & $3.0706517674163125$ & $0.9947028642521663$ & $0.00045125381930966155$ & $0.004264731532729223$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0005$ & $3.070236850446078$ & $0.9947052359932343$ & $0.0005647056232279373$ & $0.004302040405811711$\\
-    $3.2271548760451657e-7$ & $1.0$ & $0.0006$ & $3.069723416205373$ & $0.9947082444991275$ & $0.0006785774056064239$ & $0.004346974627389325$\\    
-    $0.0009536838895767626$ & $1.0$ & $0.0$ & $2.9370190457587504$ & $0.9253021269565835$ & $0.0$ & $0.0585266341496578$\\
-    $0.0009536838895767626$ & $1.0$ & $0.002$ & $2.9354795531765805$ & $0.9253921878089174$ & $0.0022382733013625957$ & $0.05785899301066716$\\
-    $0.0009536838895767626$ & $1.0$ & $0.004$ & $2.9354974958876$ & $0.9254047001045744$ & $0.004480217902893781$ & $0.05829041425456174$\\
-    $0.0009536838895767626$ & $1.0$ & $0.006$ & $2.9355234346153742$ & $0.9254269085233069$ & $0.006729454676907429$ & $0.05899947503986548$\\
-    $0.0009536838895767626$ & $1.0$ & $0.008$ & $2.935551270469769$ & $0.9254607390135051$ & $0.008989508064503429$ & $0.059972051406433184$\\
-    $0.0009536838895767626$ & $1.0$ & $0.01$ & $2.935572154787768$ & $0.9255086965138954$ & $0.011263768116134604$ & $0.06118987977165465$\\
-    $0.0009536838895767626$ & $2.0$ & $0.001999$ & $3.223538695196383$ & $1.0560878711527533$ & $0.001854944179107667$ & $0.07004521113569465$\\    
-\end{tabular}
-\caption{Periodic Orbits within the Earth-Moon, Sun-Earth, Sun-Mars, and Sun-Jupiter Systems}
-\end{table}
-\end{landscape}
-
-\newpage
-\begin{multicols}{2}
 
 \begin{figure}[H]
     \hskip -0.3cm
@@ -650,6 +611,13 @@ the perturbation required to move from a periodic orbit
 onto the orbit's stable manifold $X^S$, or unstable manifold $X^U$;
 all are pulled from Rund's thesis, and were also presented 
 in a previous paper \cite{rund2018interplanetary} \cite{carpinelli2020halos}.
+As described in upcoming sections, \textbf{I believe there is a mistake 
+in the presented invariant manifold plots}. I computed these plots by 
+perturbing the spacecraft in the direction of the stable and 
+unstable eigenvectors of the Monodromy matrix \textbf{directly}, instead of 
+changing basis by left-multiplying the eigenvector by the Jacobian. I will 
+look into this more, but did not have time to correct this mistake before 
+this paper's submission.
 
 \begin{equation}
     V_i^{S} = \Phi(t_0 + t_i, t_0) V^S
@@ -676,13 +644,29 @@ M = \Phi(t_0 + T, t_0)
 
 \section{Manifold-based Transfers}
 
-\textit{
-    An algorithm for using invariant manifolds to 
-    design interplanetary transfers will be presented,
-    as summarized by Rund \cite{rund2018interplanetary}.
-    A Julia implementation will (hopefully!) be presented
-    here as well.
-}
+\subsection{Manifolds for Interplanetary Transfers}
+One attempted manifold-based interplanetary transfer design follows.
+Given a destination Sun-Jupiter L1 Halo orbit, one wishes to travel cheaply
+from Earth to the destination orbit. Invariant manifolds can theoretically 
+be used to reduce the $\Delta v$ cost for an interplanetary transfer.
+For this theoretical mission, the spacecraft can launch directly 
+into a stable manifold of a Sun-Earth L2 Halo orbit. Once the 
+spacecraft is on some trajectory within the stable manifold, 
+CR3BP dynamics will eventually cause the spacecraft to converge
+on our chosen Halo orbit. The L2 lagrange point is selected because 
+it is located near the "mouth"
+of the zero-velocity curves for nearby orbits; in other words, 
+selecting an orbit at random within Sun-Earth L2's unstable manifold 
+have a higher probability of that orbit 
+escaping the confines of the zero 
+velocity curves, and diverging into interplanetary space. This is a useful 
+property for the next mission step: perturb the spacecraft off of the Sun-Earth 
+L2 Halo orbit, and onto the orbit's unstable manifold. Next, we need to find 
+some intersection between the Sun-Earth Halo's unstable manifold, and 
+our destination Halo's stable manifold; the difference in velocity at this 
+intersection can be approximated as an impulsive maneuver. Once the spacecraft
+is on some trajectory within our destination Halo's stable manifold,
+it will eventually converge to our destination Halo orbit. 
 
 \begin{figure}[H]
     \hskip -0.3cm
@@ -702,22 +686,393 @@ M = \Phi(t_0 + T, t_0)
     \caption{Maneuver Spacecraft onto Sun-Jupiter Stable Manifold}
 \end{figure}
 
-\section{Conclusion}
+\subsection{Implementation Challenges}
+While manifold-based transfer designs are simple in concept, there 
+are several pitfalls that may cause project delays. This subsection 
+will outline several pitfalls, and associated lessons learned.
+
+\subsubsection*{Implementation Mistakes}
+An implementation mistake that affected the results in this paper
+was discovered last-minute. Instead of following the manifold 
+perturbation equations presented in this paper, this project's 
+source code was written to instead perturb the spacecraft 
+\textit{directly} in the direction of the Monodromy matrix's
+stable and unstable eigenvectors. All manifold plots here 
+are presented \textit{with} this mistake. After briefly correcting this, 
+all manifold plots differed greatly. More investigation will be 
+necessary to correct this issue. I plan to do so this summer, as 
+part of \textit{GeneralAstrodynamics.jl} development efforts.
+
+\subsubsection*{Algorithmic Complexity}
+The naive solution for finding the closest distance between two 
+manifolds is $O(n^2)$, which is far too algorithmically complex 
+for larger manifolds, which can contain millions of Cartesian states.
+The naive implementation never returned, and quick calculations showed
+that the implementation would never return any values in a reasonable
+amount of time. After posting this issue to a Julia Discourse forum,
+I was pointed towards a Julia package called \textit{NearestNeighbors.jl}
+\cite{discourse2021} \cite{nearestNeighbors}. This package uses an 
+algorithm that find find the closest pair of points in two 
+large sets far faster than the naive solution. This algorithm
+is apparently common in computational chemistry \cite{discourse2021}.
+\textit{NearestNeighbors.jl} found the closest pair of Cartesian
+states between the two manifolds in seconds. 
+
+\subsubsection*{Manifold Intersection}
+After algorithmic complexity in finding the closest pair of points was 
+addressed, a new problem emerged; manifolds are not guaranteed to intersect. 
+Often, the closest pair of Cartesian states that could be found were still 
+hundreds of meters apart. This may be a consequence of the \textit{Implementation
+Mistakes} discussed previously, but others have found similar results. 
+Topputo et al found that manifolds do not intersect among our solar system's
+inner planets \cite{topputo2005low}. Rund did not rely on manifold 
+intersection for low-cost transfer design; Rund's thesis presented 
+manifold-based transfers to lower the cost of impulsive maneuvers
+to place the spacecraft on a hyperbolic, Heliocentric trajectory 
+\cite{rund2018interplanetary}. It's possible that manifold intersections
+are incredibly difficult to find for CR3BP systems that are so far 
+apart within the Heliocentric inertial frame. Topputo et al note
+that transfers along manifold intersections may be best suited for specific 
+mission conditions, such as travel between moons of one large planet --
+Koon's "Petit Grand Tour" of Jupiter's moons comes to mind 
+\cite{topputo2005low} \cite{koon2008dynamical}.
+
+\section{Conclusions and Forward Work}
+This project implemented added robustness and bug fixes to previously 
+implented analytical and numerical periodic orbit computation algorithms
+within CR3BP dynamics. In a previous project, analytical and numerical 
+algorithms were written, but produced incorrect results \cite{carpinelli2020halos}.
+Now, both analytical and numerical Lyapunov and Halo orbit algorithms appear 
+to be implemented correctly in \textit{GeneralAstrodynamics.jl}, an 
+open source Julia package with the aim of providing (at the author's 
+highest aspirations) another Poliastro-like tool for the scientific computing
+and astrodynamics communities \cite{carpinelli2020astro}.
+
+Pre-existing numerical Lyapunov and Halo orbit solver implementations
+were explained, and 
+combined to form one general numerical periodic orbit solver,
+as described in Mireles' notes, and partially available in 
+Mireles' publicly available code \cite{mirelesNotes} \cite{mirelesCode}.
+This function was used to catalogue over $130,000$ periodic orbits within 
+CR3BP systems in our solar system \cite{carpinelli2020halos}.
+Several families of Halo orbits were presented, and the mathematics
+behind Halo orbit computation, and CR3BP dynamics, was reviewed.
+
+The concept and computation of invariant manifolds within CR3BP
+dynamics was discussed. A visualization of an unstable manifold 
+(barring implementation issues previously addressed) was presented,
+and a generic mission design which uses invariant manifolds 
+to travel from Earth to Sun-Jupiter L1 was discussed. 
+
+Implementation complications around manifold-based transfers were 
+presented, and potential fixes were addressed. One large implementation mistake 
+was discussed -- manifold perturbation calculations are incorrectly 
+using the eigenvectors of the Monodromy matrix \textit{without} 
+left-multiplying the Jacobian at each time step. Algorithmic complexity
+can be an issue when finding intersections between manifolds, but the 
+so-called "Nearest Neighbors" algorithm implemented in 
+\textit{NearestNeighbors.jl} allows for finding the minimum intersection between
+manifolds in seconds \cite{nearestNeighbors}. Finally, manifold intersections 
+have been found to be rare in many conditions, as shown by other astrodynamicists
+\cite{topputo2005low}, and this project's results.
+
+Going forward, manifold perturbation calculations will be fixed and verified.
+If Sun-Earth L2 and Sun-Jupiter L1 Halo orbit manifold intersections are 
+found, then a specific mission design will be 
+outlined using only invariant manifolds. If no intersections are found,
+then manifolds will be used to reduce the costs of hyperbolic 
+interplanetary transfers, as shown by Rund \cite{rund2018interplanetary}.
+Development for \textit{GeneralAstrodynamics.jl} will continue. Desired 
+future features include robust coordinate frame definitions and 
+transformations, realistic time-handling, catalogued physical constants 
+for solar system bodies, hooks into existing ephemeris and other 
+astrodynamics tools, and more. 
 
 \section{References}
 \nocite{*}
 \renewcommand\refname{\vskip -0.9cm}
 \bibliography{sources}
 
-\section{Appendix}
-\textit{
-    Will present all source code necessary to replicate 
-    this project, including copy-pasted GeneralAstrodynamics.jl
-    code that is available on GitHub. Any MATLAB implementations 
-    will also be provided here, as MATLAB is a far more common 
-    tool used by astrodynamics students. 
-}
-
 \end{multicols}
+
+\section{Appendix}
+
+A brief collection of Halo orbits, the analytical Halo orbit solver
+implementation, and the numerical Halo orbit solver implementation 
+are provided here for convenience. The full results are available online,
+and are far more valuable than the fraction of the results presented in 
+the subsections below. 
+
+\subsection*{Project Links}
+\begin{itemize}
+    \item \href{https://github.com/cadojo/GeneralAstrodynamics.jl}{GeneralAstrodynamics on GitHub}
+    \item \href{https://github.com/cadojo/GeneralAstrodynamics.jl/blob/main/src/AstrodynamicsCore/CR3BP/CR3BPCalculations.jl}{Analytical Halo Solver Implementation}
+    \item \href{https://github.com/cadojo/GeneralAstrodynamics.jl/blob/main/src/Propagators/CR3BP/Halos.jl}{Numerical Halo Solver Implementation}
+    \item \href{https://github.com/cadojo/Halo-Orbit-Explorations}{This project, hosted on GitHub}
+    \item \href{https://github.com/cadojo/Halo-Orbit-Explorations/blob/main/data/exp_pro/halos}{Catalogued Halo Orbits}
+\end{itemize}
+
+\newpage
+\begin{minted}{julia}
+"""
+Returns an analytical solution for a Halo orbit about `L`.
+
+__Arguments:__ 
+- `μ`: Non-dimensional mass parameter for the CR3BP system.
+- `Az`: Desired non-dimensional Z-amplitude for Halo orbit.
+- `ϕ`: Desired Halo orbit phase.
+- `steps`: Number of non-dimensional timepoints in returned state.
+- `L`: Lagrange point to orbit (L1 or L2).
+- `hemisphere`: Specifies northern or southern Halo orbit.
+
+__Outputs:__
+- Synodic position vector `r::Array{<:AbstractFloat}`
+- Synodic velocity vector `v::Array{<:Abstractfloat}`.
+- Halo orbit period `Τ`.
+- Throws `ArgumentError` if L is not `1` or `2`.
+
+__References:__
+- [Rund, 2018](https://digitalcommons.calpoly.edu/theses/1853/).
+"""
+function analyticalhalo(μ; Az=0.00, ϕ=0.0, steps=1,
+                        L=1, hemisphere=:northern)
+
+    if L == 1
+        point = first(lagrange(μ, 1))
+        γ = abs(one(μ) - μ - point)
+        n = collect(1:4) .* one(μ)
+        c = @. (μ + (-one(1))^n * (one(μ)-μ)γ^(n+1)) / (γ^3 * (one(μ) - γ^(n+1)))
+    elseif L == 2
+        point = first(lagrange(μ, 2))
+        γ = abs(point - one(μ) + μ)
+        n = collect(1:4) .* one(μ)
+        c = @. ((-one(μ))^n * μ + (-one(μ))^n * (one(μ)-μ)γ^(n+1)) / (γ^3 * (one(μ) + γ^(n+1)))
+    else
+        throw(ArgumentError("Only Halo orbits about L1 or L2 are supported."))
+    end
+
+    ωₚ  = √((2 - c[2] + √((9c[2]^2 - 8c[2])))/2)
+    k   = (ωₚ^2 + 1 + 2c[2]) / (2ωₚ)
+
+    d₁  = (3ωₚ^2 / k) * (k*(6ωₚ^2 - 1) - 2ωₚ)
+    d₂  = (8ωₚ^2 / k) * (k*(11ωₚ^2 - 1) - 2ωₚ)
+    a₂₁ = (3c[3] * (k^2 - 2)) / (4(1 + 2c[2]))
+    a₂₂ = (3c[3]) / (4(1 + 2c[2]))
+    a₂₃ = (-3c[3]ωₚ / (4k*d₁)) * (3k^3 * ωₚ - 6k*(k-ωₚ) + 4)
+    a₂₄ = (-3c[3]ωₚ / (4k*d₁)) * (2 + 3k*ωₚ)
+    b₂₁ = (-3c[3]ωₚ / (2d₁)) * (3k*ωₚ - 4)
+    b₂₂ = -3c[3]*ωₚ / d₁
+    d₂₁ = -c[3] / (2ωₚ^2)
+    a₃₁ = (-9ωₚ / (4d₂)) * (4c[3] * (k*a₂₃-b₂₁) + k*c[4]*(4+k^2)) + 
+            ((9ωₚ^2 + 1 - c[2]) / (2d₂)) * (3c[3]*(2a₂₃-k*b₂₁) + c[4]*(2+3k^2))
+    a₃₂ = (-9ωₚ / (4d₂)) * (4c[3] * (3k*a₂₄-b₂₂) + k*c[4]) -
+            (3 / (2d₂)) * (9ωₚ^2 + 1 - c[2]) * (c[3]*(k*b₂₂+d₂₁-2a₂₄) - c[4])
+    b₃₁ = (3 / (8d₂)) * 8ωₚ * (3c[3] * (k*b₂₁ - 2a₂₃) - c[4]*(2+3k^2)) + 
+            (3/(8d₂)) * (9ωₚ^2 + 1 + 2c[2]) * (4c[3]*(k*a₂₃-b₂₁) + k*c[4]*(4+k^2))
+    b₃₂ = (9ωₚ/d₂)*(c[3]*(k*b₂₂+d₂₁-2a₂₄)-c[4]) + 
+            (3(9ωₚ^2 + 1 + 2c[2]) / (8d₂) * (4c[3]*(k*a₂₄-b₂₂)+k*c[4]))
+    d₃₁ = (3 / (64ωₚ^2)) * (4c[3]*a₂₄ + c[4])
+    d₃₂ = (3 / (64 + ωₚ^2)) * (4c[3]*(a₂₃ - d₂₁) + c[4]*(4+k^2))
+
+    s₁  = (1 / (2ωₚ*(ωₚ*(1+k^2) - 2k))) * 
+            (3c[3]/2 * (2a₂₁*(k^2 - 2) - a₂₃*(k^2 + 2) - 2k*b₂₁) - 
+            (3c[4]/8) * (3k^4 - 8k^2 + 8))
+    s₂  = (1 / (2ωₚ*(ωₚ*(1+k^2) - 2k))) * 
+            (3c[3]/2 * (2a₂₂*(k^2-2) + a₂₄*(k^2 + 2) + 2k*b₂₂ + 5d₂₁) + 
+            (3c[4]/8) * (12 - k^2))
+    l₁  = (-3c[3] / 2) * (2a₂₁ + a₂₃ + 5d₂₁) - (3c[4]/8)*(12 - k^2) + 2ωₚ^2 * s₁
+    l₂  = (3c[3]/2) * (a₂₄ - 2a₂₂) + (9c[4]/8) + 2ωₚ^2 * s₂
+    Δ   = ωₚ^2 - c[2]
+
+    Aᵧ  = Az / γ
+    Aₓ  = √((-l₂*Aᵧ^2 - Δ) / l₁)
+
+    ν   = 1 + s₁*Aₓ^2 + s₂*Aᵧ^2
+    Τ   = 2π / (ωₚ*ν)
+    τ   = ν .* (steps > 1 ? range(0, stop=Τ, length=steps) : range(0, stop=Τ, length=1000))
+
+    if hemisphere == :northern
+        m = 1.0
+    elseif hemisphere == :southern
+        m = 3.0
+    else
+        throw(ArgumentError("`hemisphere` must be `:northern` or `:southern`."))
+    end
+
+    δₘ = 2 - m
+    τ₁ = @. ωₚ*τ + ϕ
+
+    x = @. γ * (a₂₁*Aₓ^2 + a₂₂*Aᵧ^2 - Aₓ*cos(τ₁) + (a₂₃*Aₓ^2 - 
+                    a₂₄*Aᵧ^2)*cos(2τ₁) + (a₃₁*Aₓ^3 - a₃₂*Aₓ*Aᵧ^2)*cos(3τ₁)) + 1 - μ - (L == 1 ? γ : -γ)
+    y = @. γ * (k*Aₓ*sin(τ₁) + (b₂₁*Aₓ^2 - b₂₂*Aᵧ^2)*sin(2τ₁) + 
+                    (b₃₁*Aₓ^3 - b₃₂*Aₓ*Aᵧ^2)*sin(3τ₁))
+    z = @. γ * (δₘ*Aᵧ*cos(τ₁) + δₘ*d₂₁*Aₓ*Aᵧ*(cos(2τ₁)-3) + 
+                    δₘ*(d₃₂*Aᵧ*Aₓ^2 - d₃₁*Aᵧ^3)*cos(3τ₁))
+
+    ẋ = @. γ * (ωₚ*ν*Aₓ*sin(τ₁) - 2ωₚ*ν*(a₂₃*Aₓ^2 - a₂₄*Aᵧ^2)*sin(2τ₁) - 
+                    3ωₚ*ν*(a₃₁*Aₓ^3 - a₃₂*Aₓ*Aᵧ^2)*sin(3τ₁))
+    ẏ = @. γ * (ωₚ*ν*k*Aₓ*cos(τ₁) + 2ωₚ*ν*(b₂₁*Aₓ^2 - b₂₂*Aᵧ^2)*cos(2τ₁) + 
+                    3ωₚ*ν*(b₃₁*Aₓ^3 - b₃₂*Aₓ*Aᵧ^2)*cos(3τ₁))
+    ż = @. γ * (-ωₚ*ν*δₘ*Aᵧ*sin(τ₁) - 2ωₚ*ν*δₘ*d₂₁*Aₓ*Aᵧ*sin(2τ₁) - 
+                    3ωₚ*ν*δₘ*(d₃₂*Aᵧ*Aₓ^2 - d₃₁*Aᵧ^2)*sin(3τ₁))
+
+    return hcat(x, y, z)[1:steps, :], hcat(ẋ, ẏ, ż)[1:steps, :], Τ
+
+end
+\end{minted}
+
+\newpage
+\subsection*{Numerical Halo Implementation}
+\begin{minted}{julia}
+"""
+Returns a numerical solution for a Halo orbit about `L`.
+
+__Arguments:__ 
+- `μ`: Non-dimensional mass parameter for the CR3BP system.
+- `Az`: Desired non-dimensional Z-amplitude for Halo orbit.
+- `ϕ`: Desired Halo orbit phase.
+- `L`: Lagrange point to orbit (L1 or L2).
+- `hemisphere`: Specifies northern or southern Halo orbit.
+
+__Outputs:__
+- Tuple of initial states: `(r, v)` where `r::Vector{<:AbstractFloat}`, `v::Vector{<:Abstractfloat}`.
+- Throws `ArgumentError` if L is not `:L1` or `:L2`
+
+__References:__
+
+The iterative scheme was pulled from directly from literature
+and sample code, including Rund 2018,
+and Dr. Mireles' lecture notes and EarthSunHaloOrbit_NewtonMewhod.m 
+file available on their website.
+Specifically, the half-period iterative scheme (the `F` matrix
+in the source code, and corresponding "next guess" computation) 
+was ported __directly__ from Dr. Mireles' public code and notes, which are
+available online. 
+- [Dr. Mireles Notes](http://cosweb1.fau.edu/~jmirelesjames/hw5Notes.pdf)
+- [Dr. Mireles Code](http://cosweb1.fau.edu/~jmirelesjames/notes.html)
+- [Rund, 2018](https://digitalcommons.calpoly.edu/theses/1853/).
+"""
+function halo(μ; Az=0.0, L=1, hemisphere=:northern,
+                tolerance=1e-8, max_iter=20,
+                reltol=1e-14, abstol=1e-14,
+                nan_on_fail = true, disable_warnings = false)
+
+    r₀, v₀, Τ = analyticalhalo(μ; Az=Az, ϕ=0.0, L=L, hemisphere=hemisphere)
+    r₀ = r₀[1,:]
+    v₀ = v₀[1,:]
+    τ  = Τ/2
+
+    Φ  = Matrix{promote_type(eltype(r₀), eltype(v₀), typeof(τ))}(undef, 6, 6)
+
+    for i ∈ 1:max_iter
+
+        problem = ODEProblem(
+            CR3BPSTMTic!,
+            ComponentVector(vcat(r₀, v₀, [row for row ∈ eachrow(I(6))]...),
+                            Axis(r=1:3, v=4:6, Φ₁=7:12, Φ₂=13:18,
+                                    Φ₃=19:24, Φ₄=25:30, Φ₅=31:36, Φ₆=37:42)),
+            (0.0, τ),
+            (μ = μ,)
+        )    
+
+        retcode, rₛ, vₛ, Φ = let 
+            sols  = solve(problem; reltol=reltol, abstol=abstol)
+            final = sols.u[end] 
+            sols.retcode, final.r, final.v,  transpose(hcat(final.Φ₁, final.Φ₂, final.Φ₃, final.Φ₄, final.Φ₅, final.Φ₆))
+        end
+
+        ∂vₛ = accel(rₛ, vₛ, μ)
+
+        # All code in this `if, else, end` block is ported from
+        # Dr. Mireles' MATLAB code, which is available on his 
+        # website: http://cosweb1.fau.edu/~jmirelesjames/notes.html.
+        # Lecture notes, which describe this algorithm further,
+        # are available for reference as well:
+        # http://cosweb1.fau.edu/~jmirelesjames/hw5Notes.pdf
+        if Az ≉ 0
+            F = @SMatrix [
+                Φ[4,1] Φ[4,5] ∂vₛ[1];
+                Φ[6,1] Φ[6,5] ∂vₛ[3];
+                Φ[2,1] Φ[2,5]  vₛ[2]
+            ]
+
+            xᵪ = SVector(r₀[1], v₀[2], τ) - inv(F) * SVector(vₛ[1], vₛ[3], rₛ[2])
+
+            r₀[1] = xᵪ[1]
+            v₀[2] = xᵪ[2]
+            τ     = xᵪ[3]
+        else
+            F = @SMatrix [
+                Φ[4,3] Φ[4,5] ∂vₛ[1];
+                Φ[6,3] Φ[6,5] ∂vₛ[3];
+                Φ[2,3] Φ[2,5]  vₛ[2]
+            ]
+
+            xᵪ = SVector(r₀[3], v₀[2], τ) - inv(F) * SVector(vₛ[1], vₛ[3], rₛ[2])
+
+            r₀[3] = xᵪ[1]
+            v₀[2] = xᵪ[2]
+            τ     = xᵪ[3]
+        end
+
+        if abs(vₛ[1]) ≤ tolerance && abs(vₛ[3]) ≤ tolerance
+            break;
+        elseif τ > 5 * one(τ)
+            disable_warnings || @warn "Unreasonably large halo period, $τ, ending iterations."
+            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN
+            break
+        elseif i == max_iter
+            disable_warnings || @warn "Desired tolerance was not reached, and iterations have hit the maximum number of iterations: $max_iter."
+            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN
+            break
+        elseif retcode != :Success
+            !disable_warnings || @warn "Integrator returned $(string(retcode))."
+            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN    
+            break        
+        end
+    end
+
+    return r₀, v₀, 2τ
+
+end    
+\end{minted}
+\newpage
+
+\begin{landscape}
+\begin{table}
+\begin{tabular}{cccccccc}
+    Mass Parameter & Lagrange Point & $Z$-Amplitude & Period & $x$ & $z$ & $\dot{y}$ \\
+    $0.012150584269940356$ & $1.0$ & $0.0$ & $2.7536820171259744$ & $0.8222791805122408$ & $0.0$ & $0.13799313179964737$\\
+    $0.012150584269940356$ & $1.0$ & $0.002$ & $2.7430279744649004$ & $0.8233905115990996$ & $0.0022207698036084363$ & $0.1264086161524851$\\
+    $0.012150584269940356$ & $1.0$ & $0.004$ & $2.743129618348479$ & $0.8233893741253737$ & $0.004442307958743803$ & $0.12665484442364439$\\
+    $0.012150584269940356$ & $1.0$ & $0.006$ & $2.743298907640046$ & $0.8233876253798795$ & $0.006665380456556792$ & $0.12706382260243482$\\
+    $0.012150584269940356$ & $1.0$ & $0.008$ & $2.7435356656350174$ & $0.8233854825357569$ & $0.008890748615484967$ & $0.12763347860600016$\\
+    $0.012150584269940356$ & $1.0$ & $0.01$ & $2.7438396430341294$ & $0.8233832430275673$ & $0.011119166862915583$ & $0.12836097250130557$\\
+    $0.012150584269940356$ & $2.0$ & $0.001999$ & $3.4154785217654346$ & $1.1203619239893596$ & $0.001835091590818184$ & $0.17611109647933998$\\
+    $3.003480593992993e-6$ & $1.0$ & $0.0$ & $3.057037166436106$ & $0.9889069589528534$ & $0.0$ & $0.008529372360506582$\\
+    $3.003480593992993e-6$ & $1.0$ & $0.002$ & $3.0562630985504198$ & $0.9889296115452058$ & $0.0022759531712711633$ & $0.009571654363317172$\\
+    $3.003480593992993e-6$ & $1.0$ & $0.004$ & $3.0408810610908192$ & $0.9891686188174361$ & $0.0046921863531775585$ & $0.011428450586881073$\\
+    $3.003480593992993e-6$ & $1.0$ & $0.006$ & $2.9968780486251165$ & $0.9897509664037121$ & $0.007350439066516196$ & $0.013571383652713521$\\
+    $3.003480593992993e-6$ & $1.0$ & $0.008$ & $2.8360875768267277$ & $0.9909674701532162$ & $0.010323704902503393$ & $0.015198885580121493$\\
+    $3.003480593992993e-6$ & $2.0$ & $0.001798$ & $3.09794993304811$ & $1.0080662252502852$ & $0.001672550237255738$ & $0.010798428273484711$\\
+    $3.003480593992993e-6$ & $2.0$ & $0.003798$ & $3.0755344619414036$ & $1.0068608443606484$ & $0.0035047324922114834$ & $0.014513397367974044$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0$ & $3.067790305289647$ & $0.9947153604918691$ & $0.0$ & $0.004052940170205446$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0001$ & $3.0713331541226148$ & $0.9946990969840135$ & $0.00011259909689815706$ & $0.00420141728779284$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0002$ & $3.071197879663506$ & $0.9946998314896827$ & $0.0002252842583036334$ & $0.004214196175484041$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0003$ & $3.0709713120763475$ & $0.9947010768650656$ & $0.00033814100956578$ & $0.004235364341723893$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0004$ & $3.0706517674163125$ & $0.9947028642521663$ & $0.00045125381930966155$ & $0.004264731532729223$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0005$ & $3.070236850446078$ & $0.9947052359932343$ & $0.0005647056232279373$ & $0.004302040405811711$\\
+    $3.2271548760451657e-7$ & $1.0$ & $0.0006$ & $3.069723416205373$ & $0.9947082444991275$ & $0.0006785774056064239$ & $0.004346974627389325$\\    
+    $0.0009536838895767626$ & $1.0$ & $0.0$ & $2.9370190457587504$ & $0.9253021269565835$ & $0.0$ & $0.0585266341496578$\\
+    $0.0009536838895767626$ & $1.0$ & $0.002$ & $2.9354795531765805$ & $0.9253921878089174$ & $0.0022382733013625957$ & $0.05785899301066716$\\
+    $0.0009536838895767626$ & $1.0$ & $0.004$ & $2.9354974958876$ & $0.9254047001045744$ & $0.004480217902893781$ & $0.05829041425456174$\\
+    $0.0009536838895767626$ & $1.0$ & $0.006$ & $2.9355234346153742$ & $0.9254269085233069$ & $0.006729454676907429$ & $0.05899947503986548$\\
+    $0.0009536838895767626$ & $1.0$ & $0.008$ & $2.935551270469769$ & $0.9254607390135051$ & $0.008989508064503429$ & $0.059972051406433184$\\
+    $0.0009536838895767626$ & $1.0$ & $0.01$ & $2.935572154787768$ & $0.9255086965138954$ & $0.011263768116134604$ & $0.06118987977165465$\\
+    $0.0009536838895767626$ & $2.0$ & $0.001999$ & $3.223538695196383$ & $1.0560878711527533$ & $0.001854944179107667$ & $0.07004521113569465$\\    
+\end{tabular}
+\caption{Periodic Orbits within the Earth-Moon, Sun-Earth, Sun-Mars, and Sun-Jupiter Systems}
+\end{table}
+\end{landscape}
 
 \end{document}
