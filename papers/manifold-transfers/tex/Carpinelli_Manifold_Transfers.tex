@@ -12,8 +12,7 @@
 \usepackage{lscape}
 \usepackage[ruled,vlined]{algorithm2e}
 
-\usepackage{fontspec}
-\setmonofont{Unifont}
+\usepackage[mathletters]{ucs}
 
 % From https://tex.stackexchange.com/questions/323297/
 \newcommand{\rvline}{\hspace*{-\arraycolsep}\vline\hspace*{-\arraycolsep}}
@@ -30,7 +29,7 @@
     urlcolor=cyan,
 }
 
-\title{Exploring Periodic Computation and Invariant Manifolds \\ within the Circular Restricted Three-body Problem}
+\title{Exploring Periodic Orbit Computation and Invariant Manifolds \\ within the Circular Restricted Three-body Problem}
 
 \author{Joseph D. Carpinelli
     \footnote{
@@ -72,7 +71,7 @@
     with the Julia programming language.
 \end{abstract}
 
-\begin{multicols}{2}
+\begin{multicols*}{2}
 
 \tableofcontents
 
@@ -406,7 +405,7 @@ approach is shown in equation $(24)$.
 
 At this point, we've discussed three flavors of the periodic-orbit-finding 
 differential correction algorithm. The first two implementations, 
-as originally presented by Howell in \cite{howell1984three}, discussed 
+as originally presented by Howell in \cite{howell1984three}, 
 do \textit{not} refine the half-period guess for the periodic orbit; this 
 results in a potential implementation weakness when used in tandem with 
 the analytical solution, as previously discussed. The third implementation,
@@ -579,7 +578,7 @@ identity matrix at the start of the numerical integration.
 The final state transition matrix in this propagation is the 
 Monodromy matrix, and we can use this matrix to 
 evaluate local linear modes at each point along the periodic 
-orbit, as opposed to computing the state transition matrix at each point 
+orbit, as opposed to performing eigen-analysis at each point 
 we wish to evaluate. 
 
 \subsection{Calculating Invariant Manifolds}
@@ -793,15 +792,14 @@ astrodynamics tools, and more.
 \renewcommand\refname{\vskip -0.9cm}
 \bibliography{sources}
 
-\end{multicols}
+\end{multicols*}
 
 \section{Appendix}
 
-A brief collection of Halo orbits, the analytical Halo orbit solver
-implementation, and the numerical Halo orbit solver implementation 
-are provided here for convenience. The full results are available online,
-and are far more valuable than the fraction of the results presented in 
-the subsections below. 
+A brief collection of Halo orbits are provided here for convenience. 
+The full results and full source code are available online,
+and are far more valuable than the small fraction of results 
+presented below.
 
 \subsection*{Project Links}
 \begin{itemize}
@@ -811,232 +809,6 @@ the subsections below.
     \item \href{https://github.com/cadojo/Halo-Orbit-Explorations}{This project, hosted on GitHub}
     \item \href{https://github.com/cadojo/Halo-Orbit-Explorations/blob/main/data/exp_pro/halos}{Catalogued Halo Orbits}
 \end{itemize}
-
-\newpage
-\begin{minted}{julia}
-"""
-Returns an analytical solution for a Halo orbit about `L`.
-
-__Arguments:__ 
-- `μ`: Non-dimensional mass parameter for the CR3BP system.
-- `Az`: Desired non-dimensional Z-amplitude for Halo orbit.
-- `ϕ`: Desired Halo orbit phase.
-- `steps`: Number of non-dimensional timepoints in returned state.
-- `L`: Lagrange point to orbit (L1 or L2).
-- `hemisphere`: Specifies northern or southern Halo orbit.
-
-__Outputs:__
-- Synodic position vector `r::Array{<:AbstractFloat}`
-- Synodic velocity vector `v::Array{<:Abstractfloat}`.
-- Halo orbit period `Τ`.
-- Throws `ArgumentError` if L is not `1` or `2`.
-
-__References:__
-- [Rund, 2018](https://digitalcommons.calpoly.edu/theses/1853/).
-"""
-function analyticalhalo(μ; Az=0.00, ϕ=0.0, steps=1,
-                        L=1, hemisphere=:northern)
-
-    if L == 1
-        point = first(lagrange(μ, 1))
-        γ = abs(one(μ) - μ - point)
-        n = collect(1:4) .* one(μ)
-        c = @. (μ + (-one(1))^n * (one(μ)-μ)γ^(n+1)) / (γ^3 * (one(μ) - γ^(n+1)))
-    elseif L == 2
-        point = first(lagrange(μ, 2))
-        γ = abs(point - one(μ) + μ)
-        n = collect(1:4) .* one(μ)
-        c = @. ((-one(μ))^n * μ + (-one(μ))^n * (one(μ)-μ)γ^(n+1)) / (γ^3 * (one(μ) + γ^(n+1)))
-    else
-        throw(ArgumentError("Only Halo orbits about L1 or L2 are supported."))
-    end
-
-    ωₚ  = √((2 - c[2] + √((9c[2]^2 - 8c[2])))/2)
-    k   = (ωₚ^2 + 1 + 2c[2]) / (2ωₚ)
-
-    d₁  = (3ωₚ^2 / k) * (k*(6ωₚ^2 - 1) - 2ωₚ)
-    d₂  = (8ωₚ^2 / k) * (k*(11ωₚ^2 - 1) - 2ωₚ)
-    a₂₁ = (3c[3] * (k^2 - 2)) / (4(1 + 2c[2]))
-    a₂₂ = (3c[3]) / (4(1 + 2c[2]))
-    a₂₃ = (-3c[3]ωₚ / (4k*d₁)) * (3k^3 * ωₚ - 6k*(k-ωₚ) + 4)
-    a₂₄ = (-3c[3]ωₚ / (4k*d₁)) * (2 + 3k*ωₚ)
-    b₂₁ = (-3c[3]ωₚ / (2d₁)) * (3k*ωₚ - 4)
-    b₂₂ = -3c[3]*ωₚ / d₁
-    d₂₁ = -c[3] / (2ωₚ^2)
-    a₃₁ = (-9ωₚ / (4d₂)) * (4c[3] * (k*a₂₃-b₂₁) + k*c[4]*(4+k^2)) + 
-            ((9ωₚ^2 + 1 - c[2]) / (2d₂)) * (3c[3]*(2a₂₃-k*b₂₁) + c[4]*(2+3k^2))
-    a₃₂ = (-9ωₚ / (4d₂)) * (4c[3] * (3k*a₂₄-b₂₂) + k*c[4]) -
-            (3 / (2d₂)) * (9ωₚ^2 + 1 - c[2]) * (c[3]*(k*b₂₂+d₂₁-2a₂₄) - c[4])
-    b₃₁ = (3 / (8d₂)) * 8ωₚ * (3c[3] * (k*b₂₁ - 2a₂₃) - c[4]*(2+3k^2)) + 
-            (3/(8d₂)) * (9ωₚ^2 + 1 + 2c[2]) * (4c[3]*(k*a₂₃-b₂₁) + k*c[4]*(4+k^2))
-    b₃₂ = (9ωₚ/d₂)*(c[3]*(k*b₂₂+d₂₁-2a₂₄)-c[4]) + 
-            (3(9ωₚ^2 + 1 + 2c[2]) / (8d₂) * (4c[3]*(k*a₂₄-b₂₂)+k*c[4]))
-    d₃₁ = (3 / (64ωₚ^2)) * (4c[3]*a₂₄ + c[4])
-    d₃₂ = (3 / (64 + ωₚ^2)) * (4c[3]*(a₂₃ - d₂₁) + c[4]*(4+k^2))
-
-    s₁  = (1 / (2ωₚ*(ωₚ*(1+k^2) - 2k))) * 
-            (3c[3]/2 * (2a₂₁*(k^2 - 2) - a₂₃*(k^2 + 2) - 2k*b₂₁) - 
-            (3c[4]/8) * (3k^4 - 8k^2 + 8))
-    s₂  = (1 / (2ωₚ*(ωₚ*(1+k^2) - 2k))) * 
-            (3c[3]/2 * (2a₂₂*(k^2-2) + a₂₄*(k^2 + 2) + 2k*b₂₂ + 5d₂₁) + 
-            (3c[4]/8) * (12 - k^2))
-    l₁  = (-3c[3] / 2) * (2a₂₁ + a₂₃ + 5d₂₁) - (3c[4]/8)*(12 - k^2) + 2ωₚ^2 * s₁
-    l₂  = (3c[3]/2) * (a₂₄ - 2a₂₂) + (9c[4]/8) + 2ωₚ^2 * s₂
-    Δ   = ωₚ^2 - c[2]
-
-    Aᵧ  = Az / γ
-    Aₓ  = √((-l₂*Aᵧ^2 - Δ) / l₁)
-
-    ν   = 1 + s₁*Aₓ^2 + s₂*Aᵧ^2
-    Τ   = 2π / (ωₚ*ν)
-    τ   = ν .* (steps > 1 ? range(0, stop=Τ, length=steps) : range(0, stop=Τ, length=1000))
-
-    if hemisphere == :northern
-        m = 1.0
-    elseif hemisphere == :southern
-        m = 3.0
-    else
-        throw(ArgumentError("`hemisphere` must be `:northern` or `:southern`."))
-    end
-
-    δₘ = 2 - m
-    τ₁ = @. ωₚ*τ + ϕ
-
-    x = @. γ * (a₂₁*Aₓ^2 + a₂₂*Aᵧ^2 - Aₓ*cos(τ₁) + (a₂₃*Aₓ^2 - 
-                    a₂₄*Aᵧ^2)*cos(2τ₁) + (a₃₁*Aₓ^3 - a₃₂*Aₓ*Aᵧ^2)*cos(3τ₁)) + 1 - μ - (L == 1 ? γ : -γ)
-    y = @. γ * (k*Aₓ*sin(τ₁) + (b₂₁*Aₓ^2 - b₂₂*Aᵧ^2)*sin(2τ₁) + 
-                    (b₃₁*Aₓ^3 - b₃₂*Aₓ*Aᵧ^2)*sin(3τ₁))
-    z = @. γ * (δₘ*Aᵧ*cos(τ₁) + δₘ*d₂₁*Aₓ*Aᵧ*(cos(2τ₁)-3) + 
-                    δₘ*(d₃₂*Aᵧ*Aₓ^2 - d₃₁*Aᵧ^3)*cos(3τ₁))
-
-    ẋ = @. γ * (ωₚ*ν*Aₓ*sin(τ₁) - 2ωₚ*ν*(a₂₃*Aₓ^2 - a₂₄*Aᵧ^2)*sin(2τ₁) - 
-                    3ωₚ*ν*(a₃₁*Aₓ^3 - a₃₂*Aₓ*Aᵧ^2)*sin(3τ₁))
-    ẏ = @. γ * (ωₚ*ν*k*Aₓ*cos(τ₁) + 2ωₚ*ν*(b₂₁*Aₓ^2 - b₂₂*Aᵧ^2)*cos(2τ₁) + 
-                    3ωₚ*ν*(b₃₁*Aₓ^3 - b₃₂*Aₓ*Aᵧ^2)*cos(3τ₁))
-    ż = @. γ * (-ωₚ*ν*δₘ*Aᵧ*sin(τ₁) - 2ωₚ*ν*δₘ*d₂₁*Aₓ*Aᵧ*sin(2τ₁) - 
-                    3ωₚ*ν*δₘ*(d₃₂*Aᵧ*Aₓ^2 - d₃₁*Aᵧ^2)*sin(3τ₁))
-
-    return hcat(x, y, z)[1:steps, :], hcat(ẋ, ẏ, ż)[1:steps, :], Τ
-
-end
-\end{minted}
-
-\newpage
-\subsection*{Numerical Halo Implementation}
-\begin{minted}{julia}
-"""
-Returns a numerical solution for a Halo orbit about `L`.
-
-__Arguments:__ 
-- `μ`: Non-dimensional mass parameter for the CR3BP system.
-- `Az`: Desired non-dimensional Z-amplitude for Halo orbit.
-- `ϕ`: Desired Halo orbit phase.
-- `L`: Lagrange point to orbit (L1 or L2).
-- `hemisphere`: Specifies northern or southern Halo orbit.
-
-__Outputs:__
-- Tuple of initial states: `(r, v)` where `r::Vector{<:AbstractFloat}`, `v::Vector{<:Abstractfloat}`.
-- Throws `ArgumentError` if L is not `:L1` or `:L2`
-
-__References:__
-
-The iterative scheme was pulled from directly from literature
-and sample code, including Rund 2018,
-and Dr. Mireles' lecture notes and EarthSunHaloOrbit_NewtonMewhod.m 
-file available on their website.
-Specifically, the half-period iterative scheme (the `F` matrix
-in the source code, and corresponding "next guess" computation) 
-was ported __directly__ from Dr. Mireles' public code and notes, which are
-available online. 
-- [Dr. Mireles Notes](http://cosweb1.fau.edu/~jmirelesjames/hw5Notes.pdf)
-- [Dr. Mireles Code](http://cosweb1.fau.edu/~jmirelesjames/notes.html)
-- [Rund, 2018](https://digitalcommons.calpoly.edu/theses/1853/).
-"""
-function halo(μ; Az=0.0, L=1, hemisphere=:northern,
-                tolerance=1e-8, max_iter=20,
-                reltol=1e-14, abstol=1e-14,
-                nan_on_fail = true, disable_warnings = false)
-
-    r₀, v₀, Τ = analyticalhalo(μ; Az=Az, ϕ=0.0, L=L, hemisphere=hemisphere)
-    r₀ = r₀[1,:]
-    v₀ = v₀[1,:]
-    τ  = Τ/2
-
-    Φ  = Matrix{promote_type(eltype(r₀), eltype(v₀), typeof(τ))}(undef, 6, 6)
-
-    for i ∈ 1:max_iter
-
-        problem = ODEProblem(
-            CR3BPSTMTic!,
-            ComponentVector(vcat(r₀, v₀, [row for row ∈ eachrow(I(6))]...),
-                            Axis(r=1:3, v=4:6, Φ₁=7:12, Φ₂=13:18,
-                                    Φ₃=19:24, Φ₄=25:30, Φ₅=31:36, Φ₆=37:42)),
-            (0.0, τ),
-            (μ = μ,)
-        )    
-
-        retcode, rₛ, vₛ, Φ = let 
-            sols  = solve(problem; reltol=reltol, abstol=abstol)
-            final = sols.u[end] 
-            sols.retcode, final.r, final.v,  transpose(hcat(final.Φ₁, final.Φ₂, final.Φ₃, final.Φ₄, final.Φ₅, final.Φ₆))
-        end
-
-        ∂vₛ = accel(rₛ, vₛ, μ)
-
-        # All code in this `if, else, end` block is ported from
-        # Dr. Mireles' MATLAB code, which is available on his 
-        # website: http://cosweb1.fau.edu/~jmirelesjames/notes.html.
-        # Lecture notes, which describe this algorithm further,
-        # are available for reference as well:
-        # http://cosweb1.fau.edu/~jmirelesjames/hw5Notes.pdf
-        if Az ≉ 0
-            F = @SMatrix [
-                Φ[4,1] Φ[4,5] ∂vₛ[1];
-                Φ[6,1] Φ[6,5] ∂vₛ[3];
-                Φ[2,1] Φ[2,5]  vₛ[2]
-            ]
-
-            xᵪ = SVector(r₀[1], v₀[2], τ) - inv(F) * SVector(vₛ[1], vₛ[3], rₛ[2])
-
-            r₀[1] = xᵪ[1]
-            v₀[2] = xᵪ[2]
-            τ     = xᵪ[3]
-        else
-            F = @SMatrix [
-                Φ[4,3] Φ[4,5] ∂vₛ[1];
-                Φ[6,3] Φ[6,5] ∂vₛ[3];
-                Φ[2,3] Φ[2,5]  vₛ[2]
-            ]
-
-            xᵪ = SVector(r₀[3], v₀[2], τ) - inv(F) * SVector(vₛ[1], vₛ[3], rₛ[2])
-
-            r₀[3] = xᵪ[1]
-            v₀[2] = xᵪ[2]
-            τ     = xᵪ[3]
-        end
-
-        if abs(vₛ[1]) ≤ tolerance && abs(vₛ[3]) ≤ tolerance
-            break;
-        elseif τ > 5 * one(τ)
-            disable_warnings || @warn "Unreasonably large halo period, $τ, ending iterations."
-            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN
-            break
-        elseif i == max_iter
-            disable_warnings || @warn "Desired tolerance was not reached, and iterations have hit the maximum number of iterations: $max_iter."
-            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN
-            break
-        elseif retcode != :Success
-            !disable_warnings || @warn "Integrator returned $(string(retcode))."
-            !nan_on_fail || return [NaN, NaN, NaN], [NaN, NaN, NaN], NaN    
-            break        
-        end
-    end
-
-    return r₀, v₀, 2τ
-
-end    
-\end{minted}
-\newpage
 
 \begin{landscape}
 \begin{table}

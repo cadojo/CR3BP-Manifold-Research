@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.5
+# v0.14.8
 
 using Markdown
 using InteractiveUtils
@@ -68,7 +68,7 @@ _Travel as cheap as possible._
 
 * Travel from Earth, to Jupiter
 * Requires a periodic, or semi-periodic destination orbit
-* Mission is robotic – duration has __no upper bound__
+* Duration should be reasonable
 * We want to use as __little fuel as possible__
 
 
@@ -526,50 +526,8 @@ let
 	
 end
 
-# ╔═╡ d91d9336-b6e8-44b3-9c59-5db794faca6f
-md"""
-## Phase #1: Earth to Sun-Earth
-_Where should we point our launch vehicle?_
-
-
-
-
-"""
-
-# ╔═╡ 35a0ea98-d918-4883-a6da-cb87a2aea814
-md"""
-## Phase #2 and #3: Optimal Intersection
-_How can we get to the Sun-Jupiter manifold?_
-"""
-
 # ╔═╡ da51983c-d826-4ac3-a38c-51b9e6444f79
 
-
-# ╔═╡ d244c56b-2323-4504-98a7-e9557d2e9689
-md"""
-## Lessons Learned
-
-### Issues
-* Some results may be incorrect due to book-keeping, including...
-  * CR3BP to HCI
-  * Lambert scanner issues
-
-### Forward Work
-* Fix Lambert issues, confirm CR3BP to HCI calculations
-* Compare correct manifold-transfer mission results to Hohmann, Lambert (without manifold)
-* Use nonlinear optimizer to find optimal departure and arrival Halo orbit amplitudes
-* Use ephemeris data for realistic mission planning
-
-### Package Announcement
-* New Julia package: `Pkg.install("GeneralAstrodynamics")`
-* Features include:
-  * R2BP, CR3BP, and NBP definitions
-  * Position, velocity, zero-velocity-curve, Lagrange point plotting
-  * Ephemeris interpolation
-  * Orbit propagation
-  * Kepler, Lambert, and Halo solvers 
-  * More to come!
-"""
 
 # ╔═╡ 36b46ffb-bcb0-43d4-a08b-fd8c9dda185f
 md"""
@@ -611,44 +569,6 @@ md"""
 # ╔═╡ 3fc0b719-850f-481c-935d-ca4af12a6c53
 md"""
 ## Sun-Earth Halo
-"""
-
-# ╔═╡ 42e66a2a-3f4d-4eb5-a6bd-a1359c225c79
-md"""
-## Manifold Intersection with Nearest Neighbors
-"""
-
-# ╔═╡ 224bfed5-eccb-4da8-8ed1-f629ebfc9f8b
-md"""
-## Optimal Manifold Intersection
-"""
-
-# ╔═╡ 6144fd4d-0fc0-4a85-930e-94df9c06912b
-md"""
-### Pre-compute Halo Orbit States
-"""
-
-# ╔═╡ ff9be5b4-4fab-4abb-ade3-f295acefe1c8
-md"""
-### Pre-compute Halo Orbit Monodromy Matrices
-"""
-
-# ╔═╡ dfd99ef6-eea3-4b7d-a350-2a9f3d3a7863
-md"""
-### Cost Function
-"""
-
-# ╔═╡ fbc3584f-40fc-4272-9fdc-2ae32863e873
-methods(halo)
-
-# ╔═╡ 36890bc5-c54e-431a-8bf3-9d0ecfd30d3d
-md"""
-### Box Optimization
-"""
-
-# ╔═╡ cf856229-e383-4843-9e38-9883038eefe8
-md"""
-## Modidified Hohmann Transfer
 """
 
 # ╔═╡ f8d40fa2-73f1-4a3d-b081-846324f10e38
@@ -856,331 +776,6 @@ begin
 
 end
 
-# ╔═╡ 27f75a11-0d76-4e0b-a0e0-d7479e71483f
-md"""
-* Let's assume a Halo orbit with a $50,000$ km Z-axis amplitude about Sun-Earth $L2$
-* We need to find a state within the Halo's __stable manifold__ that is __easy__ to get to from Earth
-* The cost function used to evaluate each orbital state, and the resulting __optimal__ Earth-departure orbit are shown below
-* __Let's only search for orbital states within 2 Earth radii of Earth's center of mass!__
-
-$\text{COST}({}^{\text{ECI}}r_{\text{sc}}, {}^{\text{ECI}}v_{\text{sc}}, t_{(\text{to halo})})= {}^{\text{ECI}}i_{\text{sc}}^2 + t_{(\text{to halo})}^2$
-
-#### Optimal Earth-departure Target
-
-*  $(latexify(round(ustrip(u"yr", abs(epoch(R2BP(earth_departure, 2, Earth; frame = ECI, i = ᵉiₘ).state))), digits=4))) years to Halo
-"""
-
-# ╔═╡ fc2c5ff7-b52f-4bad-8afc-1edbdd0c0d69
-@terminal let
-	orbit = R2BP(earth_departure, 2, Earth; frame = ECI, i = ᵉiₘ)
-	println(orbit)
-	println("  Orbit Properties:\n")
-	println("    C3 = $(C3(orbit))")
-	println("     i =  $(inclination(orbit))")
-end
-
-# ╔═╡ 76410560-afa3-4ea0-b7a8-a18f400c1e05
-halos = (
-	sun_earth = propagate(departure_halo.orbit, departure_halo.period; 
-						  saveat=1e-6, reltol=1e-14, abstol=1e-14),
-	sun_jupiter = propagate(arrival_halo.orbit, arrival_halo.period;
-						  saveat=1e-6, reltol=1e-14, abstol=1e-14)
-);
-
-# ╔═╡ 4bbb7585-6225-43f1-9ea6-7bb33b68d951
-begin
-	
-	halo_monodromy = (
-		sun_earth = monodromy(departure_halo.orbit, departure_halo.period),
-		sun_jupiter = monodromy(arrival_halo.orbit, arrival_halo.period)
-	)
-	
-	halo_unstable_eigenvector = (
-		sun_earth   = unstable_eigenvector(halo_monodromy.sun_earth),
-		sun_jupiter = unstable_eigenvector(halo_monodromy.sun_jupiter)
-	)
-	
-	halo_stable_eigenvector = (
-		sun_earth   = stable_eigenvector(halo_monodromy.sun_earth),
-		sun_jupiter = stable_eigenvector(halo_monodromy.sun_jupiter)
-	)
-	
-end;
-
-# ╔═╡ 3d8fbf1c-bacf-4d07-ada1-58fe355de6d8
-nearest_neighbor_plot, nearest_neighbor = let
-		
-	arrival_manifold_dv = 0.3
-	arrival_manifold_duration = 5 * arrival_halo.period
-	
-	transfer_manifold_duration = 5 * departure_halo.period
-	transfer_manifold_dv = 0.3
-		
-	arrival_manifold = stable_manifold(arrival_halo.orbit, 
-									   arrival_halo.period;
-									   eps = arrival_manifold_dv,
-									   saveat = 1e-2,
-									   num_trajectories = 100,
-									   reltol = 1e-14,
-									   abstol = 1e-14,
-									   duration = arrival_manifold_duration)
-
-	arrivals_wrt_sun = map(
-		traj -> map(orbit -> R2BP(orbit, 1, Sun; frame = HCI, i = ˢiⱼ), traj),
-		arrival_manifold)
-
-
-	transfer_manifold = unstable_manifold(departure_halo.orbit, 
-										  departure_halo.period;
-										  eps      = transfer_manifold_dv,
-										  saveat   = 1e-2,
-										  num_trajectories = 100,
-										  reltol   = 1e-14, 
-										  abstol   = 1e-14,
-										  duration = transfer_manifold_duration)
-	transfers_wrt_sun = map(
-		traj -> map(orbit -> R2BP(orbit, 1, Sun; frame = HCI, i = ˢiₑ), traj),
-		transfer_manifold)
-
-
-	@assert string(lengthunit(first(first(transfers_wrt_sun)))) == 
-			string(lengthunit(first(first(arrivals_wrt_sun))))
-	LU = string(lengthunit(first(first(transfers_wrt_sun))))
-	
-	fig = plot(; title  = "Invariant Manifolds (Heliocentric Inertial Frame)",
-				 xlabel = "X ($LU)", ylabel = "Y ($LU)", zlabel = "Z ($LU)",
-				 dpi    = 200)
-	for trajectory ∈ transfers_wrt_sun
-		plotpositions!(fig, position_vector.(trajectory); 
-					   label = :none, palette = :blues)
-	end
-	for trajectory ∈ arrivals_wrt_sun
-		plotpositions!(fig, position_vector.(trajectory); 
-					   label = :none, palette = :reds)
-	end		
-
-	fig
-	
-	min_distance = min(
-		nn(
-			KDTree(ustrip.(u"km", 
-					hcat(position_vector.(vcat(transfers_wrt_sun...))...))), 
-			ustrip.(u"km", hcat(position_vector.(vcat(arrivals_wrt_sun...))...))
-		)[2]...
-	) * u"km"
-
-	fig, min_distance
-	
-end;
-
-# ╔═╡ 947a5745-ff84-40fa-8e52-28f9c70a4a31
-md"""
-## Phase #2 and #3: Manifold Intersection
-_First attempt – where can the Sun-Earth manifold take us?_
-
-* Compute the __unstable manifold__ near your Sun-Earth Halo orbit
-* Compute the __stable manifold__ near your Sun-Jupiter destination Halo orbit
-* Find the __optimal__ intersection between the two manifolds
-* If positions are identical, the difference in velocity can be treated as an impulsive maneuver!
-
-
-* First try: pre-compute both manifolds, and use the [Nearest Neighbors](https://github.com/KristofferC/NearestNeighbors.jl) algorithm to quickly find the closest pair of points
-* Unfortunately, this isn't close enough! The closest distance between manifolds, as found with Nearest Neighbors, is $(latexify(ustrip(u"km", nearest_neighbor))) km
-
-"""
-
-# ╔═╡ aa6d7608-59c3-414e-a8f5-3717d509884f
-nearest_neighbor_plot
-
-# ╔═╡ 953b6e4f-9d20-42f2-8475-8cc824b491d3
-begin
-	
-	function optimal_intersection(x, p)
-		
-		sun_earth_halo_index     = x[1]
-		sun_jupiter_halo_index   = x[2]
-		sun_earth_perturbation   = x[3]
-		sun_jupiter_perturbation = x[4]
-		
-		sun_earth_halo_index   = (Int ∘ floor)(sun_earth_halo_index)
-		sun_jupiter_halo_index = (Int ∘ floor)(sun_jupiter_halo_index)
-		
-		departure = manifold(
-			halos.sun_earth[sun_earth_halo_index], 
-			halo_unstable_eigenvector.sun_earth;
-			eps = sun_earth_perturbation
-		)
-		
-		arrival = manifold(
-			halos.sun_jupiter[sun_jupiter_halo_index],
-			halo_stable_eigenvector.sun_jupiter;
-			eps = sun_jupiter_perturbation
-		)
-		
-		
-		to_jupiter = propagate(
-			departure, 10.0; saveat=1e-4, reltol=1e-14, abstol=1e-14
-		)
-
-		from_jupiter = propagate(
-			arrival, -10.0; saveat=1e-4, reltol=1e-14, abstol=1e-14
-		)
-		
-		to_jupiter   = R2BP.(to_jupiter, 1, Sun; frame = HCI, i = ˢiₑ)
-		from_jupiter = R2BP.(from_jupiter, 1, Sun; frame = HCI, i = ˢiⱼ)
-		
-		closest_approach = let
-			D = ustrip.(u"km", hcat(position_vector.(to_jupiter)...))
-			A = ustrip.(u"km", hcat(position_vector.(from_jupiter)...))
-			
-			distances = nn(KDTree(D), A)[2]
-			
-			min(distances...)
-
-		end
-
-	end
-	
-end;
-
-# ╔═╡ 37d724a3-c23a-4b55-9e5e-d0bdb4bd2689
-begin
-	
-	x = Float64[
-		length(halos.sun_earth) ÷ 2,
-		length(halos.sun_jupiter) ÷ 2,
-		-1e-3, 
-		1e-3
-	]
-	
-	lb = Float64[1, 1, -1, -1]
-	ub = Float64[length(halos.sun_earth), length(halos.sun_jupiter), 1, 1]
-	
-	problem = GalacticOptim.OptimizationProblem(
-		optimal_intersection, x; lb = lb, ub = ub
-	)
-	
-	@terminal println("julia> solve(problem, BBO()) # This runs \"forever\"!")
-
-end
-
-# ╔═╡ ffbc7fe3-130f-4da7-aec6-d392b5a578aa
-begin
-	
-	ear = Halo(SunEarth; Az = 400_000u"km", L = 2, hemisphere = :northern)
-	jup = Halo(SunJupiter; Az = 25_000u"km", L = 1, hemisphere = :northern)
-	
-	departure_manifold = map(
-		trajectory -> map(orbit -> R2BP(orbit, 1, Sun; frame = HCI, i = ˢiₑ),
-						  trajectory),
-		unstable_manifold(
-			ear.orbit, ear.period; 
-			saveat = 1e-2, num_trajectories = 500,
-			eps = 1, duration = 5.0, reltol = 1e-14, abstol = 1e-14)
-	)
-	
-	arrival_manifold = map(
-		trajectory -> map(orbit -> R2BP(orbit, 1, Sun; frame = HCI, i = ˢiⱼ),
-						  trajectory),
-		unstable_manifold(
-			jup.orbit, jup.period; 
-			saveat = 1e-2, num_trajectories = 600,
-			eps = -1.1, duration = 5.0, reltol = 1e-14, abstol = 1e-14)
-	)
-	
-	from_earth = map(
-		trajectory -> interpolator(trajectory),
-		departure_manifold
-	)
-	
-	
-	to_jupiter = map(
-		trajectory -> interpolator(trajectory),
-		arrival_manifold
-	)
-	
-end;
-
-# ╔═╡ bd66a3ce-a15a-43dd-aba9-dccf8c48abeb
-let
-	
-	
-	function findmin(ball, mitt)
-		
-		function cost(x,p)
-			δr = (sqrt ∘ abs ∘ ustrip ∘ upreferred ∘ norm)(
-				position_vector(ball.state(x[1] * u"s")) - 
-				position_vector(mitt.state(x[2] * u"s")))
-		end
-		
-		x₀ = mean(ustrip.(u"s", ball.timespan))
-
-		lb = ustrip.(u"s", [min(ball.timespan...), min(mitt.timespan...)])
-		ub = ustrip.(u"s", [max(ball.timespan...), max(mitt.timespan...)])
-
-
-		sol = solve(
-			GalacticOptim.OptimizationProblem(cost, x₀; lb = lb, ub = ub),
-			BBO(); reltol = 1e-14, abstol = 1e-14
-		)
-			
-		return sol.minimum
-	end
-	
-	
-
-	mins = [
-		findmin(from_earth[rand(1:length(from_earth))], to_jupiter[j]) 
-		for j = 1:length(to_jupiter)
-	]
-
-	min(mins...)
-		
-	
-end
-
-# ╔═╡ 6289f398-ddf3-4bda-b95b-735fcc24d8da
-begin
-	
-	E = map(
-		trajectory -> ustrip.(u"km", vcat(position_vector.(trajectory)'...)),
-		departure_manifold
-	)
-	
-	J = map(
-		trajectory -> ustrip.(u"km", vcat(position_vector.(trajectory)'...)),
-		arrival_manifold
-	)
-	
-	
-	man = plot()
-	
-	for pos ∈ E
-		x = @views pos[:,1]
-		y = @views pos[:,2]
-		z = @views pos[:,3]
-		plot!(
-			man, x, y,
-			label = :none, palette = :greens, 
-			dpi = 150, aspect_ratio = 1
-		)
-	end
-	
-	for pos ∈ J
-		x = @views pos[:,1]
-		y = @views pos[:,2]
-		z = @views pos[:,3]
-		plot!(
-			man, x, y,
-			label = :none, palette = :reds, 
-			dpi = 150, aspect_ratio = 1, linestyle = :dot
-		)
-	end
-	
-	plot!(man, xlims=[-1.5e8, 1.5e8], ylims=[-1e8, 1e8])
-
-end
-
 # ╔═╡ Cell order:
 # ╟─d59d8616-a224-11eb-043c-d1f9fbaa616e
 # ╟─af8b6ac7-7391-4662-adec-01ca03d94a30
@@ -1204,15 +799,8 @@ end
 # ╟─8786e7d8-9d78-4b7c-bd19-d221a471a32a
 # ╠═c850a977-9fab-4014-8887-6667e64e079a
 # ╟─bd964ca0-534b-46b8-8538-d582186c1f94
-# ╠═88d150e7-609c-4a5f-a0fc-48cbae74b10b
-# ╟─d91d9336-b6e8-44b3-9c59-5db794faca6f
-# ╟─27f75a11-0d76-4e0b-a0e0-d7479e71483f
-# ╟─fc2c5ff7-b52f-4bad-8afc-1edbdd0c0d69
-# ╟─947a5745-ff84-40fa-8e52-28f9c70a4a31
-# ╟─aa6d7608-59c3-414e-a8f5-3717d509884f
-# ╟─35a0ea98-d918-4883-a6da-cb87a2aea814
+# ╟─88d150e7-609c-4a5f-a0fc-48cbae74b10b
 # ╟─da51983c-d826-4ac3-a38c-51b9e6444f79
-# ╟─d244c56b-2323-4504-98a7-e9557d2e9689
 # ╟─36b46ffb-bcb0-43d4-a08b-fd8c9dda185f
 # ╟─8c772140-a05c-47cb-aac5-2149a28fc151
 # ╟─0929f835-bef5-462b-9477-c95f70dcd2ba
@@ -1222,22 +810,6 @@ end
 # ╠═6bae2db8-3ba3-46aa-b65b-a75ca21a3d05
 # ╟─3fc0b719-850f-481c-935d-ca4af12a6c53
 # ╠═286dad18-e175-4eae-91e7-667f6a6d944e
-# ╟─42e66a2a-3f4d-4eb5-a6bd-a1359c225c79
-# ╠═3d8fbf1c-bacf-4d07-ada1-58fe355de6d8
-# ╟─224bfed5-eccb-4da8-8ed1-f629ebfc9f8b
-# ╟─6144fd4d-0fc0-4a85-930e-94df9c06912b
-# ╠═76410560-afa3-4ea0-b7a8-a18f400c1e05
-# ╟─ff9be5b4-4fab-4abb-ade3-f295acefe1c8
-# ╠═4bbb7585-6225-43f1-9ea6-7bb33b68d951
-# ╟─dfd99ef6-eea3-4b7d-a350-2a9f3d3a7863
-# ╠═953b6e4f-9d20-42f2-8475-8cc824b491d3
-# ╠═fbc3584f-40fc-4272-9fdc-2ae32863e873
-# ╟─36890bc5-c54e-431a-8bf3-9d0ecfd30d3d
-# ╠═37d724a3-c23a-4b55-9e5e-d0bdb4bd2689
-# ╟─cf856229-e383-4843-9e38-9883038eefe8
-# ╠═ffbc7fe3-130f-4da7-aec6-d392b5a578aa
-# ╠═bd66a3ce-a15a-43dd-aba9-dccf8c48abeb
-# ╠═6289f398-ddf3-4bda-b95b-735fcc24d8da
 # ╟─f8d40fa2-73f1-4a3d-b081-846324f10e38
 # ╟─9e5cd21c-23ac-4cf1-97f6-48b1647e7359
 # ╠═a0739712-bd5b-49b0-a9ae-9da5bac7c345
