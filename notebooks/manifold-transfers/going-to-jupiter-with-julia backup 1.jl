@@ -18,14 +18,11 @@ begin
 	
 	using Plots
 	using PlutoUI
-	using Latexify
 	using Rotations
-	using Symbolics
-	using StaticArrays
+	using GeneralAstrodynamics
+	using AstrodynamicalModels
 	using DifferentialEquations
-	using Unitful, UnitfulAstro 
-	using AstrodynamicalModels 	   
-	using GeneralAstrodynamics     
+	using Unitful, UnitfulAstro
 	
 end
 
@@ -58,7 +55,7 @@ md"""
 ## How can we navigate to Jupiter?
 _Where do we even start?_
 
-- GPS won't work!
+- Our Global Position System (GPS) won't work!
 - We have knowledge learned from astrodynamics coursework, research, and online resources
 * We also have `GeneralAstrodynamics.jl`
 """
@@ -74,7 +71,7 @@ html"""
 # ╔═╡ 67244ee6-8326-4828-92a2-de839fe8d274
 md"""
 ## Challenges in Astrodynamics
-_As a field, astrodynamics is incredibly demanding of scientific computing._
+_As a field, Astrodynamics is incredibly demanding of scientific computing._
 
 * Calculations are expensive, e.g. numerical integration, iterative solvers
 * Data may be large, e.g. planetary ephemeris
@@ -109,7 +106,7 @@ _Introducing Astrodynamics research alongside GeneralAstrodynamics.jl!_
 
 * Highlight language features, and packages in the ecosystem, that meet the challenges of computational astrodynamics
 
-* Present a new astrodynamics package, `GeneralAstrodynamics.jl`
+* Present a new astrodynamics package, `GeneralAstrodynamics`
 
 
 $(PlutoUI.LocalResource(joinpath("media", "generalastrodynamics.jpg"), :width=>"85%", :style=>"margin-left: auto; margin-right: auto; display: block;"))
@@ -118,82 +115,14 @@ $(PlutoUI.LocalResource(joinpath("media", "generalastrodynamics.jpg"), :width=>"
 # ╔═╡ 467c6cfc-9e8f-481d-920f-058a72634f92
 md"""
 
-## Equations of Motion
+## Restricted Two-body Dynamics
 _How will our spacecraft move?_
 
 
-### Numerical Integration Procedure
-1. Type the equations of motion into some function
-
-$\begin{aligned}
-\dot{r} &= v \\
-\dot{v} &= -\mu \frac{r}{||r||}
-\end{aligned}$
-
-2. Create an `ODEProblem`, and `solve` the problem using `DifferentialEquations.jl`
-
-!!! hint "Tip"
-	If your self-coded function allocates memory, your numerical integration __will__ be sub-optimal! Use `ModelingToolkit.jl` to generate fast functions for you!
-
-	Common models within astrodynamics have been added to `AstrodynamicalModels.jl`!
-
-### Revised Procedure
-
-```julia
-# Make a ModelingToolkit.ODESystem, or import AstrodynamicalModels
-using AstrodynamicalModels
-
-# Propagate using DifferentialEquations
-problem    = ODEProblem(R2BPVectorField, vcat(r,v), (0.0, T), (μ,))
-trajectory = solve(problem; reltol=1e-14, abstol=1e-14)
-
-# Propagate using GeneralAstrodynamics
-orbit 	   = Orbit(r, v, μ)
-trajectory = propagate(orbit, T)
-
-```
-
 """
 
-# ╔═╡ 1e767321-8109-4a66-ae8d-63be42698d61
-md"""
-## Orbit  Propagation
-_Let's practice by propagating a parking orbit about Earth!_
+# ╔═╡ 12ecf397-8109-4249-86a3-604b4a750441
 
-"""
-
-# ╔═╡ 027baa6a-9261-416b-9189-b92aa18cf979
-begin
-	
-	parking = Orbit(0, 6575u"km", 30u"°", 0u"°", 0u"°", 0u"°", Earth)
-	parking = CartesianOrbit(parking)
-
-	plotpositions(propagate(parking); label="Spacecraft", size=(600,350))
-	scatter!([0], [0], [0]; color=:green, label="Earth CoM")
-	
-end
-
-# ╔═╡ 4531bfd2-9ed6-49a0-8d6b-1df146e72151
-md"""
-## Hohmann Transfer
-_The first interplanetary transfer design they teach you!_
-
-| Symbol | Label | Expression |
-| ---- | --- | --- |
-| $r_1$ | Earth's orbital radius w.r.t. Sun | $1.496\times10^8\  \text{km}$ | 
-| $r_2$ | Jupiter's orbital radius w.r.t. Sun | $7.786\times10^8\  \text{km}$ | 
-| $v_1$ | Initial spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_1} - \frac{2\mu}{r_1+r_2}}$ | 
-| $v_2$ | Final spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_2} - \frac{2\mu}{r_1+r_2}}$ | 
-
-
-"""
-
-# ╔═╡ 5c88a3b7-ebcb-4518-a23c-8b42937a0ef4
-md"""
-## Mission Overview
-
-
-"""
 
 # ╔═╡ 6227f2be-3b59-4681-9af0-8d5bbd0b12d5
 md"""
@@ -218,7 +147,7 @@ md"""
 
 # ╔═╡ 916a959e-062e-410a-896d-9913f2cb0650
 md"""
-### Extra Packages
+### Packages
 """
 
 # ╔═╡ 4a3a9e5e-5340-476e-96ce-301ba16a74b6
@@ -237,74 +166,6 @@ macro terminal(expr)
 		end
 	end
 end;
-
-# ╔═╡ 19af281a-ba06-4184-beee-a70967f00093
-begin
-	r₁ = uconvert(u"km", normalized_length_unit(SunEarth))
-	r₂ = uconvert(u"km", normalized_length_unit(SunJupiter))
-	μ  = mass_parameter(Sun)
-	
-	v₁ = √((2μ/r₁) - (2μ/(r₁+r₂)))
-	v₂ = √((2μ/r₂) - (2μ/(r₁+r₂)))
-	T  = period(r₁+r₂, μ) / 2
-	
-	transfer = let 
-		r = normalize(ustrip.(u"km",   position_vector(parking))) .* r₁
-		v = normalize(ustrip.(u"km", position_vector(parking))) .* v₁
-		Orbit(r, v, Sun)
-	end
-	
-	
-	trajectory = propagate(transfer, period(transfer)/2)
-	
-	@terminal print(trajectory)
-end
-
-# ╔═╡ 0e8dc854-f6ef-48c8-b50b-9f491e265f09
-let
-	x = map(step -> step.state.r[1], trajectory)
-	y = map(step -> step.state.r[2], trajectory)
-	
-	plot(x, y; 
-		 linewidth=2, label="Spacecraft Position", 
-		 xlabel="X (km)", ylabel="Y (km)",
-		 aspect_ratio=1.0)
-	
-	scatter!([ustrip(u"km", r₁)], [0]; color=:green, label="Earth")
-	scatter!([ustrip(u"km", r₂)], [0]; color=:purple, label="Jupiter")
-
-
-end
-
-# ╔═╡ b8deb78a-378f-4c94-b6e3-7a4b69faeabe
-md"""
-## Keplerian Elements
-
-|Orbital Elements (Keplerian) | Input |
-| -------------- | ----- |
-| Eccentricity | $(@bind e Slider(0.0:0.01:0.9; default=0, show_value=false)) |
-| Semi-major Axis (km) | $(@bind a Slider(6500.0:100:13000, show_value=false)) |
-| Inclination (°) | $(@bind i Slider(0.0:1:360, show_value=false)) |
-| R.A.A.N. (°) | $(@bind Ω Slider(0.0:1:360, show_value=false)) |
-| Arg. of Periapsis (°) | $(@bind ω Slider(0.0:1:360, show_value=false)) |
-| True Anomoly (°) | $(@bind ν Slider(0.0:1:360, show_value=false)) |
-
-
-"""
-
-# ╔═╡ a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
-let ν = 0.0
-	
-	# Create an orbit from the parameters above
-	orbit = Orbit(e, a, i, Ω, ω, ν, Earth) |> CartesianOrbit
-	
-	# Propagate for the default duration: one orbital period
-	trajectory = propagate(orbit)
-	
-	# Plot the result!
-	plotpositions(trajectory; aspect_ratio=1.0, dpi=100)
-	
-end
 
 # ╔═╡ 889e034b-c076-4ace-8d37-c2fc1c141d25
 md"""
@@ -392,25 +253,19 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AstrodynamicalModels = "4282b555-f590-4262-b575-3e516e1493a7"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 GeneralAstrodynamics = "8068df5b-8501-4530-bd82-d24d3c9619db"
-Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
 
 [compat]
 AstrodynamicalModels = "~0.2.6"
-DifferentialEquations = "~6.17.2"
-GeneralAstrodynamics = "~0.9.5"
-Latexify = "~0.15.6"
-Plots = "~1.18.0"
+DifferentialEquations = "~6.17.1"
+GeneralAstrodynamics = "~0.9.4"
+Plots = "~1.16.7"
 PlutoUI = "~0.7.9"
 Rotations = "~1.0.2"
-StaticArrays = "~1.2.5"
-Symbolics = "~1.2.2"
 Unitful = "~1.8.0"
 UnitfulAstro = "~1.0.1"
 """
@@ -447,9 +302,9 @@ version = "3.1.17"
 
 [[ArrayLayouts]]
 deps = ["FillArrays", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "0f7998147ff3d112fad027c894b6b6bebf867154"
+git-tree-sha1 = "a345029e95c7102ef1160cf208bfa075d93a2597"
 uuid = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
-version = "0.7.3"
+version = "0.7.2"
 
 [[Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -518,9 +373,9 @@ version = "0.5.1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "dcc25ff085cf548bc8befad5ce048391a7c07d40"
+git-tree-sha1 = "be770c08881f7bb928dfd86d1ba83798f76cf62a"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "0.10.11"
+version = "0.10.9"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random", "StaticArrays"]
@@ -607,9 +462,9 @@ version = "1.7.0"
 
 [[DataFrames]]
 deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "1dadfca11c0e08e03ab15b63aaeda55266754bad"
+git-tree-sha1 = "66ee4fe515a9294a8836ef18eea7239c6ac3db5e"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.2.0"
+version = "1.1.1"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -638,9 +493,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["ArrayInterface", "ChainRulesCore", "DataStructures", "DocStringExtensions", "FastBroadcast", "FunctionWrappers", "IterativeSolvers", "LabelledArrays", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "ZygoteRules"]
-git-tree-sha1 = "932153f62d0508e59733e0fc33361470d293a889"
+git-tree-sha1 = "9488cb4c384de8d8dc79de9ab02ca320e0e9465e"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.68.1"
+version = "6.67.0"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays"]
@@ -661,10 +516,10 @@ uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 version = "6.14.2"
 
 [[DiffEqNoiseProcess]]
-deps = ["DiffEqBase", "Distributions", "LinearAlgebra", "Optim", "PoissonRandom", "QuadGK", "Random", "Random123", "RandomNumbers", "RecipesBase", "RecursiveArrayTools", "Requires", "ResettableStacks", "SciMLBase", "StaticArrays", "Statistics"]
-git-tree-sha1 = "d6839a44a268c69ef0ed927b22a6f43c8a4c2e73"
+deps = ["DiffEqBase", "Distributions", "LinearAlgebra", "Optim", "PoissonRandom", "QuadGK", "Random", "Random123", "RandomNumbers", "RecipesBase", "RecursiveArrayTools", "Requires", "ResettableStacks", "StaticArrays", "Statistics"]
+git-tree-sha1 = "3d8842936fdb1d3d95929fcb99645a48d08fd0d7"
 uuid = "77a26b50-5914-5dd7-bc55-306e6241c503"
-version = "5.9.0"
+version = "5.8.0"
 
 [[DiffEqPhysics]]
 deps = ["DiffEqBase", "DiffEqCallbacks", "ForwardDiff", "LinearAlgebra", "Printf", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "StaticArrays"]
@@ -686,9 +541,9 @@ version = "1.0.2"
 
 [[DifferentialEquations]]
 deps = ["BoundaryValueDiffEq", "DelayDiffEq", "DiffEqBase", "DiffEqCallbacks", "DiffEqFinancial", "DiffEqJump", "DiffEqNoiseProcess", "DiffEqPhysics", "DimensionalPlotRecipes", "LinearAlgebra", "MultiScaleArrays", "OrdinaryDiffEq", "ParameterizedFunctions", "Random", "RecursiveArrayTools", "Reexport", "SteadyStateDiffEq", "StochasticDiffEq", "Sundials"]
-git-tree-sha1 = "3a72107d0ce1594a2ebbd3d46c7d0832802e215a"
+git-tree-sha1 = "5166b3ea4fbddcd9eb16a9e10a9bd5bec16e8582"
 uuid = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-version = "6.17.2"
+version = "6.17.1"
 
 [[DimensionalPlotRecipes]]
 deps = ["LinearAlgebra", "RecipesBase"]
@@ -708,9 +563,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Distributions]]
 deps = ["FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "9f35e8c1b24d8d7337835942fb23210931d16f12"
+git-tree-sha1 = "2733323e5c02a9d7f48e7a3c4bc98d764fb704da"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.9"
+version = "0.25.6"
 
 [[DocStringExtensions]]
 deps = ["LibGit2"]
@@ -759,9 +614,9 @@ uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.8.4"
 
 [[ExprTools]]
-git-tree-sha1 = "b7e3d17636b348f005f11040025ae8c6f645fe92"
+git-tree-sha1 = "10407a39b87f29d47ebaca8edbc75d7c302ff93e"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.6"
+version = "0.1.3"
 
 [[FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -788,9 +643,9 @@ version = "0.3.2"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays"]
-git-tree-sha1 = "693210145367e7685d8604aee33d9bfb85db8b31"
+git-tree-sha1 = "a603e79b71bb3c1efdb58f0ee32286efe2d1a255"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.11.9"
+version = "0.11.8"
 
 [[FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
@@ -863,9 +718,9 @@ version = "0.57.3+0"
 
 [[GeneralAstrodynamics]]
 deps = ["AstrodynamicalModels", "CSV", "ComponentArrays", "Contour", "Crayons", "DataFrames", "DelimitedFiles", "DifferentialEquations", "Distributed", "DocStringExtensions", "Interpolations", "LinearAlgebra", "Logging", "PhysicalConstants", "Plots", "Reexport", "Roots", "SciMLBase", "StaticArrays", "SymbolicUtils", "Symbolics", "Unitful", "UnitfulAngles", "UnitfulAstro"]
-git-tree-sha1 = "d98a705dca707e087ef4ddf85d58cd510fe71f2f"
+git-tree-sha1 = "1907e8da4384cfd988c8ff54c9c24f9a9f24e5ce"
 uuid = "8068df5b-8501-4530-bd82-d24d3c9619db"
-version = "0.9.5"
+version = "0.9.4"
 
 [[GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -1005,9 +860,9 @@ version = "1.2.1"
 
 [[LabelledArrays]]
 deps = ["ArrayInterface", "LinearAlgebra", "MacroTools", "StaticArrays"]
-git-tree-sha1 = "5e38cfdd771c34821ade5515f782fe00865d60b3"
+git-tree-sha1 = "248a199fa42ec62922225334131c9330e1dd72f6"
 uuid = "2ee39098-c373-598a-b85f-a56591580800"
-version = "1.6.2"
+version = "1.6.1"
 
 [[Latexify]]
 deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "Printf", "Requires"]
@@ -1106,9 +961,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[LogExpFunctions]]
 deps = ["DocStringExtensions", "LinearAlgebra"]
-git-tree-sha1 = "7bd5f6565d80b6bf753738d2bc40a5dfea072070"
+git-tree-sha1 = "1ba664552f1ef15325e68dc4c05c3ef8c2d5d885"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.2.5"
+version = "0.2.4"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1264,9 +1119,9 @@ version = "1.4.1"
 
 [[OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "Logging", "MacroTools", "MuladdMacro", "NLsolve", "Polyester", "RecursiveArrayTools", "Reexport", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "2bf931b4ac5ec252bbf2ae389a84d4f0e3987c36"
+git-tree-sha1 = "f865c198eb4041535c9d27e0835c5b59cdb759d4"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.59.4"
+version = "5.59.2"
 
 [[PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1322,15 +1177,15 @@ version = "2.0.1"
 
 [[PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "Statistics"]
-git-tree-sha1 = "501c20a63a34ac1d015d5304da0e645f42d91c9f"
+git-tree-sha1 = "ae9a295ac761f64d8c2ec7f9f24d21eb4ffba34d"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.0.11"
+version = "1.0.10"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "9f126950870ef24ce75cdd841f4b7cf34affc6d2"
+git-tree-sha1 = "df601eed7c9637235a26b26f9f648deccd277178"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.18.0"
+version = "1.16.7"
 
 [[PlutoUI]]
 deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
@@ -1346,9 +1201,9 @@ version = "0.4.0"
 
 [[Polyester]]
 deps = ["ArrayInterface", "IfElse", "Requires", "Static", "StrideArraysCore", "ThreadingUtilities", "VectorizationBase"]
-git-tree-sha1 = "0ad72bf3e19ceb7a3150b2fb35e746aa8c6e1c85"
+git-tree-sha1 = "04a03d3f8ae906f4196b9085ed51506c4b466340"
 uuid = "f517fe37-dbe3-4b94-8317-1923a5111588"
-version = "0.3.2"
+version = "0.3.1"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1422,15 +1277,15 @@ version = "1.1.1"
 
 [[RecipesPipeline]]
 deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
-git-tree-sha1 = "2a7a2469ed5d94a98dea0e85c46fa653d76be0cd"
+git-tree-sha1 = "9b8e57e3cca8828a1bc759840bfe48d64db9abfb"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.3.4"
+version = "0.3.3"
 
 [[RecursiveArrayTools]]
 deps = ["ArrayInterface", "ChainRulesCore", "DocStringExtensions", "LinearAlgebra", "RecipesBase", "Requires", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "e205e8c50633f96dbc59d4ae760f4e9e4d445fdb"
+git-tree-sha1 = "b20384ee84f3e0e89cee36dbcb9c44b8bd61e133"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "2.14.5"
+version = "2.14.3"
 
 [[RecursiveFactorization]]
 deps = ["LinearAlgebra", "LoopVectorization"]
@@ -1502,9 +1357,9 @@ version = "0.0.1"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "51a5896c36b6f8636b0d25d53f91607f5cc2dacf"
+git-tree-sha1 = "7d60436171978e9b4f73790ebf436fccd307df51"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.17.0"
+version = "1.14.0"
 
 [[Scratch]]
 deps = ["Dates"]
@@ -1576,9 +1431,9 @@ version = "0.2.5"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "896d55218776ab8f23fb7b222a5a4a946d4aafc2"
+git-tree-sha1 = "745914ebcd610da69f3cb6bf76cb7bb83dcb8c9a"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.2.5"
+version = "1.2.4"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1658,9 +1513,9 @@ version = "0.13.0"
 
 [[Symbolics]]
 deps = ["ConstructionBase", "DiffRules", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "Latexify", "Libdl", "LinearAlgebra", "MacroTools", "NaNMath", "RecipesBase", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "TreeViews"]
-git-tree-sha1 = "713685972c3991b23a430fea59e32136140f2528"
+git-tree-sha1 = "09066de1f9d3b2e1c9cdd9d147cc20bf625c022f"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-version = "1.2.2"
+version = "1.2.1"
 
 [[TOML]]
 deps = ["Dates"]
@@ -1694,14 +1549,14 @@ version = "0.4.4"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
-git-tree-sha1 = "209a8326c4f955e2442c07b56029e88bb48299c7"
+git-tree-sha1 = "9f494bc54b4c31404a9eff449235836615929de1"
 uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-version = "0.5.12"
+version = "0.5.10"
 
 [[Tokenize]]
-git-tree-sha1 = "eee92eda3cc8e104b7e56ff4c1fcf0d78ca37c89"
+git-tree-sha1 = "37018506dc445ad7db288442fbb846105f26c43f"
 uuid = "0796e94c-ce3b-5d07-9a54-7f471281c624"
-version = "0.5.18"
+version = "0.5.17"
 
 [[TreeViews]]
 deps = ["Test"]
@@ -1987,13 +1842,8 @@ version = "0.9.1+5"
 # ╟─67244ee6-8326-4828-92a2-de839fe8d274
 # ╟─707d5dc6-1863-4b02-9910-44c0c01e4d8c
 # ╟─65435b1e-d80f-4015-a547-96ff2a57e3bb
-# ╟─467c6cfc-9e8f-481d-920f-058a72634f92
-# ╟─1e767321-8109-4a66-ae8d-63be42698d61
-# ╠═027baa6a-9261-416b-9189-b92aa18cf979
-# ╟─4531bfd2-9ed6-49a0-8d6b-1df146e72151
-# ╠═19af281a-ba06-4184-beee-a70967f00093
-# ╟─5c88a3b7-ebcb-4518-a23c-8b42937a0ef4
-# ╠═0e8dc854-f6ef-48c8-b50b-9f491e265f09
+# ╠═467c6cfc-9e8f-481d-920f-058a72634f92
+# ╠═12ecf397-8109-4249-86a3-604b4a750441
 # ╟─6227f2be-3b59-4681-9af0-8d5bbd0b12d5
 # ╟─122a8208-55e1-4c93-9e4d-0321ff9d84e3
 # ╠═41600e94-260a-43c5-ac1e-aa7e0d7e8f09
@@ -2002,8 +1852,6 @@ version = "0.9.1+5"
 # ╠═5cec4b12-2e54-4eab-9de5-01c55df01a0c
 # ╟─4a3a9e5e-5340-476e-96ce-301ba16a74b6
 # ╠═140901f7-2245-4e25-a490-d6f930620797
-# ╟─b8deb78a-378f-4c94-b6e3-7a4b69faeabe
-# ╠═a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
 # ╟─889e034b-c076-4ace-8d37-c2fc1c141d25
 # ╟─e78ceb55-01a0-4d44-8f21-d2b47cf82775
 # ╠═a179f8ce-0f85-4b03-9d3b-47e5c2d0274f
