@@ -13,605 +13,346 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ a9092c8c-b3b2-4608-99c3-8cc73d7816f3
+# ╔═╡ 5cec4b12-2e54-4eab-9de5-01c55df01a0c
 begin
 	
-	using DrWatson
-	
 	using Plots
-	using Revise
 	using PlutoUI
 	using Latexify
 	using Rotations
-	using Statistics
-	using DataFrames
+	using Symbolics
 	using StaticArrays
-	using LaTeXStrings
 	using LinearAlgebra
-	using BlackBoxOptim
-	using GalacticOptim
-	using ConcreteStructs
-	using NearestNeighbors
-	using GeneralAstrodynamics
 	using DifferentialEquations
-	using Unitful, UnitfulAngles, UnitfulAstro
+	using Unitful, UnitfulAstro 
+	using AstrodynamicalModels 	   
+	using GeneralAstrodynamics     
+	
+end
 
-	macro terminal(expr)
-		quote
-			with_terminal() do 
-				$(esc(expr))
-			end
-		end
+# ╔═╡ b3fe30f8-da70-11eb-1812-7588a33ee364
+md"""
+# 🚀 Going to Jupiter with Julia 
+```julia
+using GeneralAstrodynamics # a new package for common astrodynamics calculations!
+```
+
+ $(PlutoUI.TableOfContents(; depth=2, title="Table of Contents"))
+"""
+
+# ╔═╡ f15b2df7-85c8-49cd-8bd6-65c3dbd8298f
+html"""
+<div style="font-size: larger;">
+<ul>
+<li><p><a href="jcarpinelli.dev">Joe Carpinelli</a> </p>
+</li>
+<li><p>Title à la <a href="https://docs.poliastro.space/en/stable/examples/Going%20to%20Mars%20with%20Python%20using%20poliastro.html">Going to Mars with Python using poliastro</a></p>
+</li>
+<li><p>Presented at <a href="juliacon.org">JuliaCon</a> <span class="tex"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="SVG" role="presentation" tabindex="0" ctxtmenu_counter="2" style="position: relative;"><svg xmlns="http://www.w3.org/2000/svg" width="4.525ex" height="1.557ex" role="img" focusable="false" viewBox="0 -666 2000 688" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" style="vertical-align: -0.05ex;"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="matrix(1 0 0 -1 0 0)"><g data-mml-node="math"><g data-mml-node="mn"><use xlink:href="#MJX-TEX-N-32"></use><use xlink:href="#MJX-TEX-N-30" transform="translate(500, 0)"></use><use xlink:href="#MJX-TEX-N-32" transform="translate(1000, 0)"></use><use xlink:href="#MJX-TEX-N-31" transform="translate(1500, 0)"></use></g></g></g></svg><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>2021</mn></math></mjx-assistive-mml></mjx-container></span></p>
+</li>
+</ul>
+</div>
+"""
+
+# ╔═╡ be3e37aa-df5e-46bb-a50d-024622c5c3dc
+md"""
+## How can we navigate to Jupiter?
+_Where do we even start?_
+
+- Astrodynamics coursework, research, and online resources
+- A new Julia package, `GeneralAstrodynamics.jl`
+"""
+
+# ╔═╡ 04094a20-bcee-4607-93bd-e2f525c5f964
+
+html"""
+<div style="margin-left: 2%;">
+<iframe height="450" src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d6873922.479841344!2d-84.00653271879332!3d32.728369627891425!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x89b7c6de5af6e45b%3A0xc2524522d4885d2a!2sWashington%20D.C.%2C%20DC!3m2!1d38.9071923!2d-77.0368707!4m5!1s0x88d93335441a6f7d%3A0xdc51486fff899a21!2sJupiter%2C%20FL!3m2!1d26.9342246!2d-80.0942087!5e0!3m2!1sen!2sus!4v1625589679029!5m2!1sen!2sus" height="300" width = "600" style="border:0; position: relative;" allowfullscreen="" loading="lazy"></iframe>
+</div>
+"""
+
+# ╔═╡ 67244ee6-8326-4828-92a2-de839fe8d274
+md"""
+## Challenges in Astrodynamics
+_As a field, astrodynamics is incredibly demanding of scientific computing._
+
+* Calculations are expensive, e.g. numerical integration, iterative solvers
+* Data may be large, e.g. planetary ephemeris
+* Equations are complicated, e.g. analytical Halo orbit approximations
+* Unit errors are an easy trap!
+
+!!! tip "Good News"
+	__Julia can help!__ As others have found (including the talks shown below), Julia has enormous potential for scientific computing within the field of Astrodynamics!
+"""
+
+# ╔═╡ 707d5dc6-1863-4b02-9910-44c0c01e4d8c
+html"""
+<div style="margin-left: 5%;">
+<iframe height="125" src="https://www.youtube-nocookie.com/embed/IjJqVwtWO3s" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<iframe height="125" src="https://www.youtube-nocookie.com/embed/FMVOUvWNlLE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<iframe height="125" src="https://www.youtube-nocookie.com/embed/FUbjxHRa39E" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<iframe height="125" src="https://www.youtube-nocookie.com/embed/QdGrR0inYj8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+"""
+
+# ╔═╡ 65435b1e-d80f-4015-a547-96ff2a57e3bb
+md"""
+## Let's plan a trip to Jupiter!
+_Introducing Astrodynamics research alongside GeneralAstrodynamics.jl!_
+
+### Goals
+
+* Design a trajectory between Earth and Jupiter using simple models
+
+* Highlight language features, and packages in the ecosystem, that meet the challenges of computational astrodynamics
+
+* Present a new astrodynamics package, `GeneralAstrodynamics.jl`
+
+
+$(PlutoUI.LocalResource(joinpath("media", "generalastrodynamics.jpg"), :width=>"85%", :style=>"margin-left: auto; margin-right: auto; display: block;"))
+
+"""
+
+# ╔═╡ 749f7e4e-c1b5-4a2b-9ed3-862dc27a3b44
+html"""
+<div style="text-align: center;">
+<p><i>
+Image credit to <a href=https://twitter.com/code_typed/status/1391454924442046464?s=20>Twitter's</a> new GitHub Card format.
+</i></p>
+</div>
+"""
+
+# ╔═╡ 467c6cfc-9e8f-481d-920f-058a72634f92
+md"""
+
+## Equations of Motion
+_How will our spacecraft move?_
+
+
+### Restricted Two-body Problem
+
+Assume your spacecraft is only pulled by the gravity of __one__ celestial body. Let the spacecraft's position relative to the center of mass of the celestial body be $r$, and let the spacecraft's velocity be $v$. The mass parameter ($g_0 \times \text{mass of body}$) is $\mu$.
+
+$\begin{aligned}
+\dot{r} &= v \\
+\dot{v} &= -\mu \frac{r}{||r||}
+\end{aligned}$
+
+Write these dynamics into a function, and plug that function into a numerical integrator (i.e. the excellent `DifferentialEquations.jl`) __simulate__ (a.k.a. __propagate__) your dynamics forward or backward in time.
+
+!!! warning
+	If your self-coded function allocates memory, your numerical integration __will__ be sub-optimal. 
+!!! tip
+	Use `ModelingToolkit.jl` to generate fast functions for you! Common models within astrodynamics have been added to `AstrodynamicalModels.jl`!
+
+
+"""
+
+# ╔═╡ 1e767321-8109-4a66-ae8d-63be42698d61
+md"""
+## Orbit Propagation
+_Practically out-of-the-box!_
+
+* `GeneralAstrodynamics.jl` uses `AstrodynamicalModels.jl` to wrap the numerical integrators in `DifferentialEquations.jl` for easy-to-type orbit propagation
+* That sounds like a mouthful, but look how simple it is!
+"""
+
+# ╔═╡ 4531bfd2-9ed6-49a0-8d6b-1df146e72151
+md"""
+## Hohmann Transfer
+_The first interplanetary transfer design they teach you!_
+
+| Symbol | Label | Expression |
+| ---- | --- | --- |
+| $r_1$ | Earth's orbital radius w.r.t. Sun | $1.496\times10^8\  \text{km}$ | 
+| $r_2$ | Jupiter's orbital radius w.r.t. Sun | $7.786\times10^8\  \text{km}$ | 
+| $v_1$ | Initial spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_1} - \frac{2\mu}{r_1+r_2}}$ | 
+| $v_2$ | Final spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_2} - \frac{2\mu}{r_1+r_2}}$ | 
+
+"""
+
+# ╔═╡ 19af281a-ba06-4184-beee-a70967f00093
+let
+	r₁ = uconvert(u"km", normalized_length_unit(SunEarth))
+	r₂ = uconvert(u"km", normalized_length_unit(SunJupiter))
+	μ  = mass_parameter(Sun)
+	
+	v₀ = √(μ/r₁)
+	v₃ = √(μ/r₂)
+	v₁ = √((2μ/r₁) - (2μ/(r₁+r₂)))
+	v₂ = √((2μ/r₂) - (2μ/(r₁+r₂)))
+	T  = period(r₁+r₂, μ) / 2
+	
+	transfer = let 
+		r = [r₁, zero(r₁), zero(r₁)]
+		v = [zero(v₁), v₁, zero(v₁)]
+		Orbit(r, v, Sun)
 	end
 	
-end;
+	Δv₁ = abs(v₁ - v₃)
+	Δv₂ = abs(v₃ - v₂)
+	Δv  = round(ustrip(u"km/s", Δv₁ + Δv₂); digits=4)
+	
+	trajectory = propagate(transfer, period(transfer)/2)
+	
+	x = map(step -> step.state.r[1], trajectory)
+	y = map(step -> step.state.r[2], trajectory)
+	
+	plot(x, y; title = "Hohmann Transfer (Cost: $(Δv) km/s)",
+		 linewidth=2, label="Spacecraft Position", arrow=true,
+		 xlabel="X (km)", ylabel="Y (km)",
+		 aspect_ratio=1.0, size=(600,350))
+	
+	scatter!([ustrip(u"km", r₁)], [0]; color=:green, label="Earth")
+	scatter!([-ustrip(u"km", r₂)], [0]; color=:purple, label="Jupiter")
+	scatter!([0], [0]; color=:orange, label="Sun")
+	
+end
 
-# ╔═╡ d59d8616-a224-11eb-043c-d1f9fbaa616e
+# ╔═╡ 628a98a7-a612-4a8c-802c-a8f35483fb8c
 md"""
-# Study: Interplanetary Superhighways
-_🎢 Going to Jupiter with Julia, Halo orbits, and invariant manifolds._
-
-__May $\mathbf{2021}$__ $(html"<br>")
-__Joe Carpinelli__ $(html"<br>")
-
-$(PlutoUI.TableOfContents(; title = "📚 Table of Contents", depth = 2))
-$(html"<button onclick=present()>Toggle Presentation</button>")
+## Manifold Transfers
+_Interplanetary superhighways, under active research!_
 
 """
 
-# ╔═╡ af8b6ac7-7391-4662-adec-01ca03d94a30
-md"""
-## Study Overview
-
-### Mission Constraints
-_Travel as cheap as possible._
-
-* Travel from Earth, to Jupiter
-* Requires a periodic, or semi-periodic destination orbit
-* Duration should be reasonable
-* We want to use as __little fuel as possible__
-
-
-* __Transfers along invariant manifolds within CR3BP are great options for these constraints!__
-* An artist's interpretation of invariant manifolds in space is featured on [NASA's website](https://www.nasa.gov/mission_pages/genesis/media/jpl-release-071702.html), and is shown below
-"""
-
-# ╔═╡ 684c3b78-a47c-4fba-9a80-e6a07bc5e799
+# ╔═╡ dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
 html"""
 <figure>
 <img src="https://www.nasa.gov/images/content/63114main_highway_med.jpg" alt="Invariant Manifolds in Space" style="display: block; margin-left: auto; margin-right: auto; width: 80%; border-radius: 5%; ">
+<figcaption style="text-align: center; font-style: italic;">
+Image credit to <a href="https://www.nasa.gov/mission_pages/genesis/media/jpl-release-071702.html">NASA's</a> overview page on manifold transfer designs.
+</figcaption>
 </figure>
 
+
+
 """
 
-# ╔═╡ afa41959-dbee-4e81-97a6-1717f476dd77
+# ╔═╡ 6227f2be-3b59-4681-9af0-8d5bbd0b12d5
 md"""
-## Recall Lagrange Points
-_The equilibrium points of CR3BP dynamics._
-
-* Like any equilibrium points, they can be __stable__ or __unstable__
-* We can verify the stability by looking at the __eigenvalues__ of the linearized CR3BP dynamics __at__ each Lagrange point
-
+# 📦 Extras
 """
 
-# ╔═╡ 267edd09-82ea-4cf9-92e8-f871ac4f0f5c
+# ╔═╡ 122a8208-55e1-4c93-9e4d-0321ff9d84e3
+	 html"<button onclick=present()>Toggle Presentation</button>"
+
+
+
+# ╔═╡ 41600e94-260a-43c5-ac1e-aa7e0d7e8f09
 md"""
-
-__System:__ $(@bind lagrange_plot_sys PlutoUI.Select([
-	"Earth-Moon" => "Earth-Moon",
-	"Sun-Earth" => "Sun-Earth",
-	"Sun-Mars" => "Sun-Mars",
-	"Sun-Jupiter" => "Sun-Jupiter"
-])) 
+## Credits
 
 """
 
-# ╔═╡ 46d550bc-713e-43af-8b2e-8ffa65d0e600
-let 
-	
-	if lagrange_plot_sys == "Earth-Moon"
-		sys = EarthMoon
-	elseif lagrange_plot_sys == "Sun-Earth"
-		sys = SunEarth
-	elseif lagrange_plot_sys == "Sun-Mars"
-		sys = SunMars
-	else
-		sys = SunJupiter
-	end
-	
-	# Plot lagrange points
-	figure = lagrangeplot(sys)
-	
-	# Plot centers of mass
-	plotbodies!(figure, sys; legend = :topright)
-	
-end
-
-# ╔═╡ 3813dffe-54fb-48a1-a5fb-9a6c81ed1ad7
-md"""
-## Periodic Orbits within CR3BP
-_Classifications don't really matter for this study!_
-### Classifications
-* __Lyapunov Orbits__ are periodic with $z \equiv 0$
-* __Halo Orbits__ are periodic with $z \not\equiv 0$
-
-
-"""
-
-# ╔═╡ 50ee947b-7df3-4de6-9223-08bc1bd9398d
-let
-
-	options = (; reltol = 1e-16, abstol = 1e-16)
-	Lyapunov  = propagate(halo(EarthMoon; Az = 0, L = 1)...; options...)
-	Halo      = propagate(halo(EarthMoon; Az = 5_000u"km", L = 1)...; options...)
-	
-	fig = plotpositions(Lyapunov; title="Periodic CR3BP Orbits", 
-						label="Lyapunov Orbit")
-	plotpositions!(fig, Halo; label = "Halo Orbit")
-	
-end
-
-# ╔═╡ 0e8c29c8-32d0-4b2b-aa20-e947cf36389c
-md"""
-## Analytical Halo Approximation
-_As described in detail by Koon et al._
-
-Richardson approximated CR3BP dynamics with a __third-order expansion__:
-
-$\begin{align}
-\ddot{x} - 2\dot{y} - (1 + 2c_2)x &= \frac{3}{2}c_3(2x^2-y^2-z^2) + 2c_4x(2x^2-3y^2-3z^2) + O(4) \\
-\ddot{y}+2\dot{x}+(c_2-1)y &= -3c_3 x y - \frac{3}{2}c_4 y(4x^2-y^2-z^2) + O(4) \\
-\ddot{z} + c_2z &= -3c_3 x z - \frac{3}{2}c_4 z(4x^2-y^2-z^2) + O(4)
-\end{align}$
-
-We can use the following facts to find a unique, periodic solution to this third-order expansion:
-1. Nonlinearities affect the __frequency__ of the linearization (Lindstedt-Poincaré Method)
-2. The amplitudes of the linearization solution produce __equal__ eigen-frequencies
-3. The $X$, $Y$, and $Z$ amplitudes are __related__ and __unique__
-
-__The analytical algorithm can return the orbital period, positions, and velocities.__
-
-"""
-
-# ╔═╡ de2eb7a9-3d36-42c0-b12a-f7f2303692f3
-@terminal let μ = normalized_mass_parameter(EarthMoon)
-	println("julia> μ = $μ")
-	println("julia> analyticalhalo(μ; Az = 0.03, L = 1, steps = 1)\n")
-	r, v, T = analyticalhalo(μ; Az = 0.03, L = 1, steps = 1)
-
-	@show r
-	@show v
-	@show T
-end
-
-# ╔═╡ 272d58f1-4d59-4243-8de3-326b02d4628a
-md"""
-## Propagating Analytical Solutions
-_It doesn't work!_
-
-!!! note
-	Remember, we used a __third-order expansion__ of the CR3BP dynamics. As a result, our analytical halo solutions are __approximations__!
-
-__Include Propagation:__ $(@bind plot_analytical_propagation PlutoUI.CheckBox())
-
-"""
-
-# ╔═╡ 72492b56-30f3-44ad-81ff-1b59fced5d47
-let 
-	μ  = normalized_mass_parameter(EarthMoon)
-	LU = string(normalized_length_unit(EarthMoon))
-	
-	# Analytical trajectory
-	r, v, T = analyticalhalo(μ; Az = 0.0399, steps=1000, L=1)
-		
-	# Analytical trajectory plot
-	fig = plotpositions(collect(eachrow(r)); 
-						title  = "Halo Orbits about Earth-Moon L1", 
-						label  = "Analytical Solution",
-						xlabel = "X ($LU)", 
-						ylabel = "Y ($LU)", 
-						zlabel = "Z ($LU)")
-	
-	# Propagate the analytical solution!
-	options = (; reltol = 1e-16, abstol = 1e-16)
-	rₙ = position_vector.(propagate(CR3BPOrbit(r[1,:], v[1,:], μ), T; options...))
-	
-	# Propagated trajectory plot
-	if plot_analytical_propagation
-		plotpositions!(fig, rₙ; linewidth = 2, label = "Numerical Propagation")
-	end
-	
-	fig
-end
-
-# ╔═╡ c761130f-88e5-4375-abba-9b196c9b0a27
-md"""
-## Numerical Halo Solver
-_AKA a differential corrector!_
-
-Recall the __differential correction algorithm__ introduced in ENAE$601$.
-
-1. Start with a Halo guess of the form $r_0 = \begin{bmatrix} x_0 & 0 & z_0 \end{bmatrix},\ v_0 = \begin{bmatrix} 0 & \dot{y}_0 & 0 \end{bmatrix},\ T_0$
-2. Propagate the solution for __half a period__ (until $y$ crosses the $x-z$ plane again)
-3. Use a __differential correction__${}^\star$ to form a new Halo guess
-4. Repeat until your half-period $\dot{x}_0$ and $\dot{z}_0$ values are within some acceptable tolerance of $0$
-
-Literature shows __two__${}^\star$ acceptable differential correction calculations, with $\Phi$ representing the Jacobian of the Cartesian state at the half-period.
-
-$\begin{bmatrix} z_0 \\  \dot{y}_0 \\ \frac{T_0}{2} \end{bmatrix} ⟽\begin{bmatrix} x_0 \\ \dot{y}_0 \\ \frac{T_0}{2} \end{bmatrix} - \text{inv}\left( \begin{bmatrix}
-	\Phi_{1,4} & \Phi_{5,4} & \ddot{x} \\
-	\Phi_{1,6} & \Phi_{5,6} & \ddot{z} \\
-	\Phi_{1,2} & \Phi_{5,2} & \dot{y}
-\end{bmatrix}\right) \begin{bmatrix} \dot{x} \\ \dot{y} \\ y \end{bmatrix} \tag{1}$
-
-$\begin{bmatrix} x_0 \\  \dot{y}_0 \\ \frac{T_0}{2} \end{bmatrix} ⟽\begin{bmatrix} z_0 \\ \dot{y}_0 \\ \frac{T_0}{2} \end{bmatrix} - \text{inv}\left( \begin{bmatrix}
-	\Phi_{3,4} & \Phi_{5,4} & \ddot{x} \\
-	\Phi_{3,6} & \Phi_{5,6} & \ddot{z} \\
-	\Phi_{3,2} & \Phi_{5,2} & \dot{y}
-\end{bmatrix}\right) \begin{bmatrix} \dot{x} \\ \dot{y} \\ y \end{bmatrix} \tag{2}$
-
-!!! tip
-	You can't just _choose_ whatever corrector you want! If you're solving for a Lyapunov orbit $\left(z \equiv 0\right)$ then the $3\times3$ matrix will be singular (second row) if you choose equation $\left(1\right)$. In practive, I've learned to use a switch statement – if your desired $z$-axis ampltitude is $0$, then use $\left(2\right)$, and otherwise use $\left(1\right)$.
-"""
-
-# ╔═╡ dd9efeb6-359a-428b-b2be-93f7a3735734
-md"""
-## Propagating Numerical Solutions
-_This ~does~ work!_
-
-We can __combine__ the working analytical and numerical solvers to form one ergonomic halo solver!
-
-$\text{Desired Attributes} \rightarrow \boxed{\text{Analytical}} \rightarrow \boxed{\text{Numerical}} \rightarrow \text{Halo Orbit}$
-
-"""
-
-# ╔═╡ 507a6e8c-52e2-4223-befc-82ad631af446
-md"""
-### 🥁 Halo Orbit Attributes
-
-__System:__ $(@bind halo_attr_sys PlutoUI.Select([
-	"Earth-Moon" => "Earth-Moon",
-	"Sun-Earth" => "Sun-Earth",
-	"Sun-Mars" => "Sun-Mars",
-	"Sun-Jupiter" => "Sun-Jupiter"
-])) 
-   __Lagrange Point:__ $(@bind halo_attr_lagrange PlutoUI.Select([
-	"1" => "1", 
-	"2" => "2"
-]))
-__Z-axis Amplitude:__ $(@bind halo_attr_amp PlutoUI.NumberField(0.0:0.0001:0.05; default = 0.005))
-"""
-
-# ╔═╡ 2319c22e-4417-4c0a-9b0b-b951a8bf58f4
-let 
-	if halo_attr_sys == "Earth-Moon"
-		sys = EarthMoon
-	elseif halo_attr_sys == "Sun-Earth"
-		sys = SunEarth
-	elseif halo_attr_sys == "Sun-Mars"
-		sys = SunMars
-	else
-		sys = SunJupiter
-	end
-	
-	μ  = normalized_mass_parameter(sys)
-	LU = (string ∘ normalized_length_unit)(sys)
-	Az = halo_attr_amp
-	L  = parse(Int, halo_attr_lagrange)
-	
-	rₐ, vₐ, Tₐ = analyticalhalo(μ; Az = Az, L = L, steps = 1000)
-	
-	fig = plotpositions((collect ∘ eachrow)(rₐ); 
-						title  = "Halo Orbit about $(sys.name) L$L",
-						label  = "Analytical Solution",
-						xlabel = "X ($LU)", 
-						ylabel = "Y ($LU)", 
-						zlabel = "Z ($LU)",
-						dpi    = 200)
-
-	options = (; reltol = 1e-16, abstol = 1e-16)
-	traj = propagate(halo(EarthMoon; Az = Az, L = L)...; options...)
-	
-	plotpositions!(fig, traj; label = "Numerical Solution")
-		
-	fig
-end
-
-# ╔═╡ b489caad-6f05-4e1f-88a9-3c008e4ba98c
-md"""
-## Halo Orbit Families
-_Variations in Z-axis amplitude._
-* A Halo orbit _family_ is a collection of Halos with varying Z-axis amplitudes
-* A collection of over $130,000$ Halo orbits in our solar system is available on GitHub [here](https://github.com/cadojo/Halo-Explorations/blob/main/data/exp_pro/halos/)!
-"""
-
-# ╔═╡ a4538dea-2e55-42c6-8573-e77c75607e7c
-md"""
-### Halo Family Attributes
-
-__System:__ $(@bind family_attr_sys PlutoUI.Select([
-	"Earth-Moon" => "Earth-Moon",
-	"Sun-Earth" => "Sun-Earth",
-	"Sun-Mars" => "Sun-Mars",
-	"Sun-Jupiter" => "Sun-Jupiter"
-])) 
-   __Lagrange Point:__ $(@bind family_attr_lagrange PlutoUI.Select([
-	"1" => "1", 
-	"2" => "2"
-]; default = "2"))
-
-"""
-
-# ╔═╡ fb847908-ee98-447e-ae03-23afd0b9d9e4
-let 
-	if family_attr_sys == "Earth-Moon"
-		sys = EarthMoon
-	elseif family_attr_sys == "Sun-Earth"
-		sys = SunEarth
-	elseif family_attr_sys == "Sun-Mars"
-		sys = SunMars
-	else
-		sys = SunJupiter
-	end
-	
-	μ   = normalized_mass_parameter(sys)
-	LU  = (string ∘ normalized_length_unit)(sys)
-	AZ  = [i * 1e-4 for i ∈ 1:4:100]
-	L   = parse(Int, family_attr_lagrange)
-	fig = plot()
-	
-	for Az ∈ AZ
-
-		options = (; reltol = 1e-14, abstol = 1e-14)
-		traj = propagate(halo(EarthMoon; Az = Az, L = L)...; options...)
-
-		plotpositions!(fig, traj; 
-					   label   = :none,
-					   title   = "Halo Orbits about $(sys.name) L$L",
-					   xlabel  = "X ($LU)", 
-					   ylabel  = "Y ($LU)", 
-					   zlabel  = "Z ($LU)",
-					   dpi     = 200,
-					   palette = :tab10)
-	end
-	
-	savefig(fig, joinpath(plotsdir(), "halo_family_sj1.png"))
-	
-	fig
-end
-
-# ╔═╡ 8786e7d8-9d78-4b7c-bd19-d221a471a32a
-md"""
-## Manifolds Overview
-_Superhighways in ~space~._
-
-* Manifolds are __collections of trajectories__ that __converge to__ or __diverge from__ a periodic orbit or Lagrange point
-* They are visualized by plotting trajectories _near_ a Lagrange point, or a periodic CR3BP orbit
-"""
-
-# ╔═╡ c850a977-9fab-4014-8887-6667e64e079a
-let system = EarthMoon
-	
-	orbit, T = halo(system; Az = 0.03, L = 1)
-	manifold = unstable_manifold(orbit, T; eps=1e-5, 
-								 num_trajectories = 100, duration=1T, saveat=1e-2)
-	
-	LU  = string(normalized_length_unit(orbit.system))
-	fig = plot(; palette = :rainbow, dpi = 200,
-				 label  = "Halo Orbit", 
-				 xlabel = "X ($LU)", ylabel = "Y ($LU)", zlabel = "Z ($LU)",
-				 title  = "Unstable Manifold near $(system.name) L1")
-	
-	for trajectory ∈ manifold
-		
-		plotpositions!(fig, trajectory; linestyle = :dot, label = :none)
-		
-	end
-		
-	
-	plotpositions!(fig, propagate(orbit, T); 
-				   linewidth = 4, color = :black,
-				   label = "Halo Orbit")
-	
-	fig
-	
-end
-
-# ╔═╡ bd964ca0-534b-46b8-8538-d582186c1f94
-md"""
-## Mission Phases
-_Manifold-based interplanetary missions are a $3$ step process._
-
-1. Launch from Earth into a __stable manifold__ within the Sun-Earth system
-2. Perturb from the Sun-Earth Halo onto an __unstable manifold__
-3. Transfer onto a __stable manifold__ of the desired destination Halo orbit
-
-__Mission Phase:__ $(@bind mission_phase PlutoUI.Select([
-	"Phase One" => "Phase One",
-	"Phase Two" => "Phase Two",
-	"Phase Three" => "Phase Three"
-])) 
-
-"""
-
-# ╔═╡ 88d150e7-609c-4a5f-a0fc-48cbae74b10b
-let
-
-	if mission_phase == "Phase One"
-		
-		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
-		manifold = stable_manifold(orbit, T; duration=T, eps=-1e-7, saveat=1e-2)
-		
-		LU  = (string ∘ normalized_length_unit)(orbit.system)
-		fig = plot(; title = "Phase #1: Earth to Sun-Earth Halo", 
-			   		 xlabel = "X ($LU)", ylabel = "Y ($LU)",
-					 dpi = 250, legend = :topright)
-		
-		scatter!(fig, map(el->[el], secondary_synodic_position(orbit)[1:2])...; 
-				 label = "Earth")
-		
-		scatter!(fig, map(el->[el], lagrange(SunEarth, 2)[1:2])...; 
-				 markershape = :x, label = "Sun-Earth L2")
-		
-		for trajectory ∈ manifold
-			plotpositions!(fig, trajectory; 
-						   exclude_z  = true,
-						   label     = :none, 
-						   palette   = :blues, 
-				           linestyle = :dot)
-		end
-		
-		plotpositions!(fig, propagate(orbit, T); 
-					   linewidth = 3, color = :black, legend = :topleft, 
-					   label = "Halo Orbit", exclude_z = true)
-		
-		fig
-		
-	elseif mission_phase == "Phase Two"
-		
-		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
-		manifold = unstable_manifold(orbit, T; duration=3T, eps=1e-9, saveat=1e-2);	
-		
-		LU  = (string ∘ normalized_length_unit)(orbit.system)
-		fig = plot(; title = "Phase #2: Sun-Earth Halo to Transfer Orbit", 
-			   		 xlabel = "X ($LU)", ylabel = "Y ($LU)",
-			   		 dpi = 250, legend = :topright)
-		
-		for trajectory ∈ manifold
-			plotpositions!(fig, trajectory; 
-						   exclude_z  = true,
-						   label     = :none, 
-						   palette   = :blues, 
-				           linestyle = :dot)
-		end
-		
-		plotpositions!(fig, propagate(orbit, T); 
-					   linewidth = 3, color = :black, legend = :topright,
-					   label = "Halo Orbit", exclude_z = true)
-		
-		fig
-		
-	elseif mission_phase == "Phase Three"
-		
-		orbit, T = halo(SunJupiter; Az=300_000u"km", L=1)
-		manifold = stable_manifold(orbit, T; duration=3T, eps=1e-9, saveat=1e-2);	
-		
-		LU  = (string ∘ normalized_length_unit)(orbit.system)
-		fig = plot(; title = "Phase #3: Transfer Orbit to Sun-Jupiter Halo",
-				     xlabel = "X ($LU)", ylabel = "Y ($LU)", zlabel = "Z ($LU)",
-			   		 dpi = 250, legend = :topright)
-		
-		scatter!(fig, map(el->[el], secondary_synodic_position(orbit)[1:2])...; 
-				 label = "Jupiter")
-		
-		for trajectory ∈ manifold
-			plotpositions!(fig, trajectory; 
-						   exclude_z  = false,
-						   label     = :none, 
-						   palette   = :reds, 
-				           linestyle = :dot)
-		end
-		
-		plotpositions!(fig, propagate(orbit, T); 
-					   linewidth = 3, color = :black, legend = :topleft,
-					   label = "Halo Orbit", exclude_z = true)
-		
-		fig
-		
-	end
-	
-	
-end
-
-# ╔═╡ da51983c-d826-4ac3-a38c-51b9e6444f79
-
-
-# ╔═╡ 36b46ffb-bcb0-43d4-a08b-fd8c9dda185f
-md"""
-## Project References
-"""
-
-# ╔═╡ 8c772140-a05c-47cb-aac5-2149a28fc151
-md"""
-* NASA,NASAs Lunar Exploration Program Overview, 2020.
-* Rund, M. S., “Interplanetary Transfer Trajectories Using the Invariant Manifolds of Halo Orbits,” , 2018.
-* Richardson, D., “Analytical construction of periodic orbits about the collinear points of the Sun-Earth system.” asdy, 1980, p. 127.
-* Koon,W.S.,Lo,M.W.,Marsden,J.E.,andRoss,S.D.,“Dy- namical systems, the three-body problem and space mission design,” Free online Copy: Marsden Books, 2008.
-* Howell, K. C., “Three-dimensional, periodic,haloorbits,” Ce- lestial mechanics, Vol. 32, No. 1, 1984, pp. 53–71.
-* Carpinelli, J., “Exploring Invariant Manifolds and Halo Orbits,” https://github.com/cadojo/Halo-Orbit-Solvers, 2020- 2021.
-* Carpinelli, J., “GeneralAstrodynamics.jl,” https://github.com/cadojo/GeneralAstrodynamics.jl, 2021.
-* Bezanson, J., Edelman, A., Karpinski, S., and Shah, V. B., “Julia: A fresh approach to numerical computing,” SIAM review, Vol. 59, No. 1, 2017, pp. 65–98. URL https://doi.org/10.1137/141000671.
-* van der Plas, F., “Pluto.jl,” https://github.com/fonsp/Pluto.jl, 2020.
-* Williams, J., Lee, D. E., Whitley, R. J., Bokelmann, K. A., Davis, D. C., and Berry, C. F., “Targeting cislunar near recti- linear halo orbits for human space exploration,” 2017.
-* Vallado, D. A., Fundamentals of astrodynamics and applica- tions, Vol. 12, Springer Science & Business Media, 2001.
-* Lara,M.,Russell,R.,andVillac,B.,“Classificationofthedis- tant stability regions at Europa,” Journal of Guidance, Control, and Dynamics, Vol. 30, No. 2, 2007, pp. 409–418.
-* Zimovan-Spreen, E. M., Howell, K. C., and Davis, D. C., “Near rectilinear halo orbits and nearby higher-period dynam- ical structures: orbital stability and resonance properties,” Ce- lestial Mechanics and Dynamical Astronomy, Vol. 132, No. 5, 2020, pp. 1–25.
-"""
-
-# ╔═╡ 0929f835-bef5-462b-9477-c95f70dcd2ba
-md"""
-# Extras
-"""
-
-# ╔═╡ 2b852e42-915f-4088-89c1-bf5436384b13
+# ╔═╡ 336249c2-bdae-487e-aff3-184c7b0f0a10
 md"""
 ## Dependencies
 """
 
-# ╔═╡ 39b25fb5-89c0-46aa-b521-de42989a942c
+# ╔═╡ 916a959e-062e-410a-896d-9913f2cb0650
 md"""
-## Halo Orbit Destination
+### Extra Packages
 """
 
-# ╔═╡ 3fc0b719-850f-481c-935d-ca4af12a6c53
+# ╔═╡ 4a3a9e5e-5340-476e-96ce-301ba16a74b6
 md"""
-## Sun-Earth Halo
+### Macros
 """
 
-# ╔═╡ f8d40fa2-73f1-4a3d-b081-846324f10e38
-md"""
-## Support Types
+# ╔═╡ 140901f7-2245-4e25-a490-d6f930620797
 """
-
-# ╔═╡ 9e5cd21c-23ac-4cf1-97f6-48b1647e7359
-md"""
-### Halos
+A wrapper macro for PlutoUI.with_terminal.
 """
-
-# ╔═╡ a0739712-bd5b-49b0-a9ae-9da5bac7c345
-begin
-	struct Halo{O<:CR3BPOrbit, T<:Real}
-		orbit::O
-		period::T
-	end
-	
-	function Halo(param::P; kwargs...) where P<:Union{Real, CR3BPSystem}
-		orbit, T = halo(param; kwargs...)
-		return Halo(orbit, T)
+macro terminal(expr)
+	quote
+		with_terminal() do
+			$(esc(expr))
+		end
 	end
 end;
 
-# ╔═╡ 6bae2db8-3ba3-46aa-b65b-a75ca21a3d05
-begin
-	
-	# Destination Halo
-	arrival_halo = Halo(halo(SunJupiter; Az = 400_000u"km", L = 1)...)
-	
-	@terminal print("Destination Halo:\n", arrival_halo.orbit)
+# ╔═╡ 027baa6a-9261-416b-9189-b92aa18cf979
+let r = randn(3), v = randn(3)
+
+	orbit 	   = Orbit(r, v, Earth) 
+	trajectory = propagate(orbit)
+
+	@terminal let
+		@show orbit
+		@show trajectory
+		@show isapprox(orbit, trajectory[end])
+	end
 end
 
-# ╔═╡ 35b796d2-2780-4190-b8d6-5d507083cc38
+# ╔═╡ b8deb78a-378f-4c94-b6e3-7a4b69faeabe
 md"""
-## Support Functions
+## Keplerian Elements
+
+|Orbital Elements (Keplerian) | Input |
+| -------------- | ----- |
+| Eccentricity | $(@bind e Slider(0.0:0.01:0.9; default=0, show_value=false)) |
+| Semi-major Axis (km) | $(@bind a Slider(6500.0:100:13000, show_value=false)) |
+| Inclination (°) | $(@bind i Slider(0.0:1:360, show_value=false)) |
+| R.A.A.N. (°) | $(@bind Ω Slider(0.0:1:360, show_value=false)) |
+| Arg. of Periapsis (°) | $(@bind ω Slider(0.0:1:360, show_value=false)) |
+| True Anomoly (°) | $(@bind ν Slider(0.0:1:360, show_value=false)) |
+
+
 """
 
-# ╔═╡ 1444c267-8f14-4194-a2af-031f406d90fd
+# ╔═╡ a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
+let ν = 0.0
+	
+	# Create an orbit from the parameters above
+	orbit = Orbit(e, a, i, Ω, ω, ν, Earth) |> CartesianOrbit
+	
+	# Propagate for the default duration: one orbital period
+	trajectory = propagate(orbit)
+	
+	# Plot the result!
+	plotpositions(trajectory; aspect_ratio=1.0, dpi=100)
+	
+end
+
+# ╔═╡ 889e034b-c076-4ace-8d37-c2fc1c141d25
 md"""
-### CR3BP to R2BP
+# Drafts
 """
 
-# ╔═╡ 715dd0bb-cb36-4bab-b53e-bdbeb2ed8d51
-function R2BP(orb::CR3BPOrbit, body_index::Int, body::R2BPSystem; 
+# ╔═╡ e78ceb55-01a0-4d44-8f21-d2b47cf82775
+md"""
+
+## Mission Specifications
+
+| Mission Detail | Value |
+| -------------- | ----- |
+| __Departure Planet:__ | $(@bind departure_planet_str PlutoUI.Select(["Venus", "Earth", "Mars", "Jupiter"], default = "Earth")) |
+| __Arrival Planet:__ | $(@bind arrival_planet_str PlutoUI.Select(["Venus", "Earth", "Mars", "Jupiter"], default = "Jupiter")) |
+
+"""
+
+# ╔═╡ a179f8ce-0f85-4b03-9d3b-47e5c2d0274f
+begin
+	
+	depart = eval(Symbol("Sun" * departure_planet_str))
+	arrive = eval(Symbol("Sun" * arrival_planet_str))
+	
+end;
+
+# ╔═╡ 6c5cbf65-296e-49a1-968b-96e783c2cc83
+begin
+	
+	depart_halo = halo(depart; Az = 500_000u"km",  L = 2)
+	arrive_halo = halo(arrive; Az = 200_000u"km",  L = 1)
+	
+end;
+
+# ╔═╡ 74092742-ccbd-4661-8ca6-15ce789244fe
+function CR3BPtoR2BP(orb::CR3BPOrbit, body_index::Int, body::R2BPSystem; 
 			  frame = Inertial, i = 0u"°")
 
 	@assert body_index ∈ (1,2) "Second argument must be 1 or 2."
@@ -640,9 +381,9 @@ function R2BP(orb::CR3BPOrbit, body_index::Int, body::R2BPSystem;
 	tₛ = tₛ  * TU
 	
 	# Rotate about x by the inclination angle i
-	Rx(θ) = transpose(RotX(θ)) # produces [1 0 0; 0 cθ sθ; 0 -sθ cθ]
-	rₛ = Rx(i) * rₛ
-	vₛ = Rx(i) * vₛ
+	Rx = transpose(RotX(i)) 
+	rₛ = Rx * rₛ
+	vₛ = Rx * vₛ
 	
 	# Cartesian state
 	state = CartesianState(
@@ -657,164 +398,33 @@ function R2BP(orb::CR3BPOrbit, body_index::Int, body::R2BPSystem;
 	
 end;
 
-# ╔═╡ 7d2894c5-5670-42da-9225-34d29583fd74
-md"""
-## Julia vs. MATLAB
-_What's the difference?_
-
-* MATLAB is commercial software, while Julia is free and open-source
-* Julia has a robust package manager, and can run faster than MATLAB __during execution__
-* Julia is _just-ahead-of-time_ compiled, so you pay by __waiting for your code to compile__ the first time you execute it (microseconds to seconds)
-
-| Task | MATLAB | Julia | 
-| ---- | ------ | ----- |
-| Print to the console | disp('Hello, world!') | print("Hello, world!") |
-| Make a random 3×3 matrix | M = rand(3,3) | M = randn(3,3) | 
-| Take the determinant | det(M) | det(M) | 
-| Matrix multiplication | M * M | M * M |
-| Element-wise multiplication | M .* M | M .* M |
-| Two-norm of a vector | norm(vec) | norm(vec) |
-| Vectorize function (1/2)| for i = vec, f(i), end | for i = vec; f(i); end |
-| Vectorize function (2/2)| n/a | f.(vec) _or_ map(f, vec) |
-| Numerical integration | ode45(f, x0, p t) | solve(ODEProblem(f, x₀, p, t)) |
-| Anonymous function | f = @(x,y) x^2 + y^2 | f = (x,y) -> x^2 + y^2 |
-| Symbolic math | syms x y z | @variables x y z | 
-| Manual | help f | @doc f |
- 
-"""
-
-# ╔═╡ 25158dd7-ee8f-4781-8c6d-a8b1c9bbe657
-md"""
-## Solar System Inclination
-"""
-
-# ╔═╡ 6ad80a71-fbd2-42e9-8254-a85f2c6ee228
-begin
-	
-	earth, t = let
-		ephem  = joinpath(datadir(), "exp_pro", "ephemeris")
-		state  = interpolator(joinpath(ephem, "wrt_sun", "Earth.txt"))
-		trange = range(state.timespan[1]; 
-				  stop   = state.timespan[2], 
-				  length = 1_000_000)
-		t -> R2BPOrbit(state.state(t), Sun), trange
-	end
-	
-	jupiter = let
-		ephem  = joinpath(datadir(), "exp_pro", "ephemeris")
-		state  = interpolator(joinpath(ephem, "wrt_sun", "Jupiter.txt"))
-		t -> R2BPOrbit(state.state(t), Sun)
-	end
-	
-	moon = let
-		ephem = joinpath(datadir(), "exp_pro", "ephemeris")
-		state = interpolator(joinpath(ephem, "wrt_earth", "Moon.txt"))
-		t -> R2BPOrbit(state.state(t), Earth)
-	end
-	
-	ˢiₑ = mean(inclination.(earth.(t)))
-	ˢiⱼ = mean(inclination.(jupiter.(t)))
-	ᵉiₘ = mean(inclination.(moon.(t)))
-	
-	
-	@terminal let
-		println("Average Inclination:")
-		println("    Earth wrt Sun: ", ˢiₑ)
-		println("  Jupiter wrt Sun: ", ˢiⱼ)
-		println("   Moon wrt Earth: ", ᵉiₘ)
-	end	
-end
-
-# ╔═╡ 286dad18-e175-4eae-91e7-667f6a6d944e
-begin
-
-	departure_halo = Halo(SunEarth; Az = 25_000u"km", L = 2)
-	
-	earth_departure = let 
-
-			
-		man = stable_manifold(departure_halo.orbit, departure_halo.period;
-							  duration = 3 * departure_halo.period,
-							  eps = -1e-2, num_trajectories = 25, 
-							  saveat = 1e-2,
-							  reltol = 1e-14, abstol = 1e-14)
-
-		targets = vcat(man...)
-		indices = [i for i ∈ 1:length(targets)]
-
-		filter!(
-			i -> 0.5u"Rearth" ≤ scalar_position(
-				R2BP(targets[i], 2, Earth; frame = ECI, i = ᵉiₘ)
-			) ≤ 2u"Rearth",
-			indices
-		)
-		
-		optimal_index = findmin(
-			i -> let
-				orbit = R2BP(targets[i], 2, Earth; frame = ECI, i = ᵉiₘ)
-				      (ustrip ∘ upreferred ∘ inclination)(orbit)^2 + 
-					  (ustrip ∘ upreferred ∘ epoch)(orbit.state)^2
-			end, indices
-		)[2]
-		
-		targets[optimal_index]
-		
-	end
-		
-
-	@terminal let
-		orbit = R2BP(earth_departure, 2, Earth; frame = ECI, i = ᵉiₘ)
-		println(orbit)
-		println("  Orbit Properties:\n")
-		println("    T = $(abs(uconvert(u"d", epoch(orbit.state))))")
-		println("   C3 = $(C3(orbit))")
-		println("  alt = $(uconvert(u"km", scalar_position(orbit) - 1u"Rearth"))")
-	end
-
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+AstrodynamicalModels = "4282b555-f590-4262-b575-3e516e1493a7"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
-GalacticOptim = "a75be94c-b780-496d-a8a9-0878b188d577"
 GeneralAstrodynamics = "8068df5b-8501-4530-bd82-d24d3c9619db"
-LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-UnitfulAngles = "6fb2a4bd-7999-5318-a3b2-8ad61056cd98"
 UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
 
 [compat]
-BlackBoxOptim = "~0.6.0"
-ConcreteStructs = "~0.2.2"
-DataFrames = "~1.1.1"
-DifferentialEquations = "~6.17.1"
-DrWatson = "~2.0.5"
-GalacticOptim = "~2.0.3"
-GeneralAstrodynamics = "~0.9.4"
-LaTeXStrings = "~1.2.1"
+AstrodynamicalModels = "~0.2.6"
+DifferentialEquations = "~6.17.2"
+GeneralAstrodynamics = "~0.9.5"
 Latexify = "~0.15.6"
-NearestNeighbors = "~0.4.9"
-Plots = "~1.16.7"
+Plots = "~1.18.0"
 PlutoUI = "~0.7.9"
-Revise = "~3.1.17"
 Rotations = "~1.0.2"
-StaticArrays = "~1.2.4"
+StaticArrays = "~1.2.5"
+Symbolics = "~1.2.2"
 Unitful = "~1.8.0"
-UnitfulAngles = "~0.6.1"
 UnitfulAstro = "~1.0.1"
 """
 
@@ -850,9 +460,9 @@ version = "3.1.17"
 
 [[ArrayLayouts]]
 deps = ["FillArrays", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "a345029e95c7102ef1160cf208bfa075d93a2597"
+git-tree-sha1 = "0f7998147ff3d112fad027c894b6b6bebf867154"
 uuid = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
-version = "0.7.2"
+version = "0.7.3"
 
 [[Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -878,12 +488,6 @@ version = "0.16.9"
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[BlackBoxOptim]]
-deps = ["CPUTime", "Compat", "Distributed", "Distributions", "HTTP", "JSON", "LinearAlgebra", "Printf", "Random", "SpatialIndexing", "StatsBase"]
-git-tree-sha1 = "514bbe6f2e46cb396e684eb4c12d8a6c30f3adf4"
-uuid = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-version = "0.6.0"
-
 [[BoundaryValueDiffEq]]
 deps = ["BandedMatrices", "DiffEqBase", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "NLsolve", "Reexport", "SparseArrays"]
 git-tree-sha1 = "fe34902ac0c3a35d016617ab7032742865756d7d"
@@ -900,11 +504,6 @@ version = "1.0.6+5"
 git-tree-sha1 = "215a9aa4a1f23fbd05b92769fdd62559488d70e9"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.4.1"
-
-[[CPUTime]]
-git-tree-sha1 = "2dcc50ea6a0a1ef6440d6eecd0fe3813e5671f45"
-uuid = "a9c8d775-2e2e-55fc-8582-045d282d599e"
-version = "1.0.0"
 
 [[CSTParser]]
 deps = ["Tokenize"]
@@ -932,15 +531,9 @@ version = "0.5.1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "be770c08881f7bb928dfd86d1ba83798f76cf62a"
+git-tree-sha1 = "dcc25ff085cf548bc8befad5ce048391a7c07d40"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "0.10.9"
-
-[[CodeTracking]]
-deps = ["InteractiveUtils", "UUIDs"]
-git-tree-sha1 = "8ad457cfeb0bca98732c97958ef81000a543e73e"
-uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
-version = "1.0.5"
+version = "0.10.11"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random", "StaticArrays"]
@@ -1003,17 +596,6 @@ git-tree-sha1 = "d5b014b216dc891e81fea299638e4c10c657b582"
 uuid = "b152e2b5-7a66-4b01-a709-34e65c35f657"
 version = "0.1.2"
 
-[[ConcreteStructs]]
-git-tree-sha1 = "d3cb9f9cd86434a8d6f9d7e43280f6da46d2fea5"
-uuid = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
-version = "0.2.2"
-
-[[ConsoleProgressMonitor]]
-deps = ["Logging", "ProgressMeter"]
-git-tree-sha1 = "3ab7b2136722890b9af903859afcf457fa3059e8"
-uuid = "88cd18e8-d9cc-4ea6-8889-5259c0d15c8b"
-version = "0.1.2"
-
 [[ConstructionBase]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "f74e9d5388b8620b4cee35d4c5a618dd4dc547f4"
@@ -1038,9 +620,9 @@ version = "1.7.0"
 
 [[DataFrames]]
 deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "66ee4fe515a9294a8836ef18eea7239c6ac3db5e"
+git-tree-sha1 = "1dadfca11c0e08e03ab15b63aaeda55266754bad"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.1.1"
+version = "1.2.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -1069,9 +651,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffEqBase]]
 deps = ["ArrayInterface", "ChainRulesCore", "DataStructures", "DocStringExtensions", "FastBroadcast", "FunctionWrappers", "IterativeSolvers", "LabelledArrays", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "ZygoteRules"]
-git-tree-sha1 = "9488cb4c384de8d8dc79de9ab02ca320e0e9465e"
+git-tree-sha1 = "932153f62d0508e59733e0fc33361470d293a889"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.67.0"
+version = "6.68.1"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays"]
@@ -1092,10 +674,10 @@ uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
 version = "6.14.2"
 
 [[DiffEqNoiseProcess]]
-deps = ["DiffEqBase", "Distributions", "LinearAlgebra", "Optim", "PoissonRandom", "QuadGK", "Random", "Random123", "RandomNumbers", "RecipesBase", "RecursiveArrayTools", "Requires", "ResettableStacks", "StaticArrays", "Statistics"]
-git-tree-sha1 = "3d8842936fdb1d3d95929fcb99645a48d08fd0d7"
+deps = ["DiffEqBase", "Distributions", "LinearAlgebra", "Optim", "PoissonRandom", "QuadGK", "Random", "Random123", "RandomNumbers", "RecipesBase", "RecursiveArrayTools", "Requires", "ResettableStacks", "SciMLBase", "StaticArrays", "Statistics"]
+git-tree-sha1 = "d6839a44a268c69ef0ed927b22a6f43c8a4c2e73"
 uuid = "77a26b50-5914-5dd7-bc55-306e6241c503"
-version = "5.8.0"
+version = "5.9.0"
 
 [[DiffEqPhysics]]
 deps = ["DiffEqBase", "DiffEqCallbacks", "ForwardDiff", "LinearAlgebra", "Printf", "Random", "RecipesBase", "RecursiveArrayTools", "Reexport", "StaticArrays"]
@@ -1117,9 +699,9 @@ version = "1.0.2"
 
 [[DifferentialEquations]]
 deps = ["BoundaryValueDiffEq", "DelayDiffEq", "DiffEqBase", "DiffEqCallbacks", "DiffEqFinancial", "DiffEqJump", "DiffEqNoiseProcess", "DiffEqPhysics", "DimensionalPlotRecipes", "LinearAlgebra", "MultiScaleArrays", "OrdinaryDiffEq", "ParameterizedFunctions", "Random", "RecursiveArrayTools", "Reexport", "SteadyStateDiffEq", "StochasticDiffEq", "Sundials"]
-git-tree-sha1 = "5166b3ea4fbddcd9eb16a9e10a9bd5bec16e8582"
+git-tree-sha1 = "3a72107d0ce1594a2ebbd3d46c7d0832802e215a"
 uuid = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-version = "6.17.1"
+version = "6.17.2"
 
 [[DimensionalPlotRecipes]]
 deps = ["LinearAlgebra", "RecipesBase"]
@@ -1139,9 +721,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Distributions]]
 deps = ["FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "a837fdf80f333415b69684ba8e8ae6ba76de6aaa"
+git-tree-sha1 = "9f35e8c1b24d8d7337835942fb23210931d16f12"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.24.18"
+version = "0.25.9"
 
 [[DocStringExtensions]]
 deps = ["LibGit2"]
@@ -1158,12 +740,6 @@ version = "0.5.2"
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-
-[[DrWatson]]
-deps = ["Dates", "FileIO", "LibGit2", "MacroTools", "Pkg", "Random", "Requires", "UnPack"]
-git-tree-sha1 = "b180694335d459ae755a79a86b5b57a6bbf3d7d0"
-uuid = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
-version = "2.0.5"
 
 [[DynamicPolynomials]]
 deps = ["DataStructures", "Future", "LinearAlgebra", "MultivariatePolynomials", "MutableArithmetics", "Pkg", "Reexport", "Test"]
@@ -1196,9 +772,9 @@ uuid = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 version = "1.8.4"
 
 [[ExprTools]]
-git-tree-sha1 = "10407a39b87f29d47ebaca8edbc75d7c302ff93e"
+git-tree-sha1 = "b7e3d17636b348f005f11040025ae8c6f645fe92"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.3"
+version = "0.1.6"
 
 [[FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -1223,20 +799,11 @@ git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
 uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
 
-[[FileIO]]
-deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "256d8e6188f3f1ebfa1a5d17e072a0efafa8c5bf"
-uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.10.1"
-
-[[FileWatching]]
-uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
-
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays"]
-git-tree-sha1 = "a603e79b71bb3c1efdb58f0ee32286efe2d1a255"
+git-tree-sha1 = "693210145367e7685d8604aee33d9bfb85db8b31"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.11.8"
+version = "0.11.9"
 
 [[FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays"]
@@ -1307,17 +874,11 @@ git-tree-sha1 = "e14907859a1d3aee73a019e7b3c98e9e7b8b5b3e"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
 version = "0.57.3+0"
 
-[[GalacticOptim]]
-deps = ["ArrayInterface", "ConsoleProgressMonitor", "DiffResults", "DocStringExtensions", "Logging", "LoggingExtras", "Printf", "ProgressLogging", "Reexport", "Requires", "SciMLBase", "TerminalLoggers"]
-git-tree-sha1 = "fd355a5e3657d4159fb8dbf9d04138b115ac1442"
-uuid = "a75be94c-b780-496d-a8a9-0878b188d577"
-version = "2.0.3"
-
 [[GeneralAstrodynamics]]
 deps = ["AstrodynamicalModels", "CSV", "ComponentArrays", "Contour", "Crayons", "DataFrames", "DelimitedFiles", "DifferentialEquations", "Distributed", "DocStringExtensions", "Interpolations", "LinearAlgebra", "Logging", "PhysicalConstants", "Plots", "Reexport", "Roots", "SciMLBase", "StaticArrays", "SymbolicUtils", "Symbolics", "Unitful", "UnitfulAngles", "UnitfulAstro"]
-git-tree-sha1 = "1907e8da4384cfd988c8ff54c9c24f9a9f24e5ce"
+git-tree-sha1 = "d98a705dca707e087ef4ddf85d58cd510fe71f2f"
 uuid = "8068df5b-8501-4530-bd82-d24d3c9619db"
-version = "0.9.4"
+version = "0.9.5"
 
 [[GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -1438,12 +999,6 @@ git-tree-sha1 = "9e7476b5e1dc749e525497eef53809893cb6c898"
 uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 version = "0.14.8"
 
-[[JuliaInterpreter]]
-deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
-git-tree-sha1 = "31c2eee64c1eee6e8e3f30d5a03d4b5b7086ab29"
-uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
-version = "0.8.18"
-
 [[LAME_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "f6250b16881adf048549549fba48b1161acdac8c"
@@ -1463,21 +1018,15 @@ version = "1.2.1"
 
 [[LabelledArrays]]
 deps = ["ArrayInterface", "LinearAlgebra", "MacroTools", "StaticArrays"]
-git-tree-sha1 = "248a199fa42ec62922225334131c9330e1dd72f6"
+git-tree-sha1 = "5e38cfdd771c34821ade5515f782fe00865d60b3"
 uuid = "2ee39098-c373-598a-b85f-a56591580800"
-version = "1.6.1"
+version = "1.6.2"
 
 [[Latexify]]
 deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "Printf", "Requires"]
 git-tree-sha1 = "a4b12a1bd2ebade87891ab7e36fdbce582301a92"
 uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 version = "0.15.6"
-
-[[LeftChildRightSiblingTrees]]
-deps = ["AbstractTrees"]
-git-tree-sha1 = "71be1eb5ad19cb4f61fa8c73395c0338fd092ae0"
-uuid = "1d6d02ad-be62-4b6b-8a6d-2f90e265016e"
-version = "0.1.2"
 
 [[LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -1570,30 +1119,18 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[LogExpFunctions]]
 deps = ["DocStringExtensions", "LinearAlgebra"]
-git-tree-sha1 = "1ba664552f1ef15325e68dc4c05c3ef8c2d5d885"
+git-tree-sha1 = "7bd5f6565d80b6bf753738d2bc40a5dfea072070"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.2.4"
+version = "0.2.5"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-
-[[LoggingExtras]]
-deps = ["Dates", "Logging"]
-git-tree-sha1 = "dfeda1c1130990428720de0024d4516b1902ce98"
-uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
-version = "0.4.7"
 
 [[LoopVectorization]]
 deps = ["ArrayInterface", "DocStringExtensions", "IfElse", "LinearAlgebra", "OffsetArrays", "Polyester", "Requires", "SLEEFPirates", "Static", "StrideArraysCore", "ThreadingUtilities", "UnPack", "VectorizationBase"]
 git-tree-sha1 = "20316f08f70fae085ed90c7169ae318c036ee83b"
 uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
 version = "0.12.49"
-
-[[LoweredCodeUtils]]
-deps = ["JuliaInterpreter"]
-git-tree-sha1 = "4bfb8b57df913f3b28a6bd3bdbebe9a50538e689"
-uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
-version = "2.1.0"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
@@ -1684,12 +1221,6 @@ git-tree-sha1 = "bfe47e760d60b82b66b61d2d44128b62e3a369fb"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "0.3.5"
 
-[[NearestNeighbors]]
-deps = ["Distances", "StaticArrays"]
-git-tree-sha1 = "16baacfdc8758bc374882566c9187e785e85c2f0"
-uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.9"
-
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
@@ -1746,9 +1277,9 @@ version = "1.4.1"
 
 [[OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "Logging", "MacroTools", "MuladdMacro", "NLsolve", "Polyester", "RecursiveArrayTools", "Reexport", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "f865c198eb4041535c9d27e0835c5b59cdb759d4"
+git-tree-sha1 = "2bf931b4ac5ec252bbf2ae389a84d4f0e3987c36"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.59.2"
+version = "5.59.4"
 
 [[PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1804,15 +1335,15 @@ version = "2.0.1"
 
 [[PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "Statistics"]
-git-tree-sha1 = "ae9a295ac761f64d8c2ec7f9f24d21eb4ffba34d"
+git-tree-sha1 = "501c20a63a34ac1d015d5304da0e645f42d91c9f"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.0.10"
+version = "1.0.11"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "df601eed7c9637235a26b26f9f648deccd277178"
+git-tree-sha1 = "9f126950870ef24ce75cdd841f4b7cf34affc6d2"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.16.7"
+version = "1.18.0"
 
 [[PlutoUI]]
 deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
@@ -1828,9 +1359,9 @@ version = "0.4.0"
 
 [[Polyester]]
 deps = ["ArrayInterface", "IfElse", "Requires", "Static", "StrideArraysCore", "ThreadingUtilities", "VectorizationBase"]
-git-tree-sha1 = "04a03d3f8ae906f4196b9085ed51506c4b466340"
+git-tree-sha1 = "0ad72bf3e19ceb7a3150b2fb35e746aa8c6e1c85"
 uuid = "f517fe37-dbe3-4b94-8317-1923a5111588"
-version = "0.3.1"
+version = "0.3.2"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1859,18 +1390,6 @@ version = "1.1.0"
 [[Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-
-[[ProgressLogging]]
-deps = ["Logging", "SHA", "UUIDs"]
-git-tree-sha1 = "80d919dee55b9c50e8d9e2da5eeafff3fe58b539"
-uuid = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
-version = "0.1.4"
-
-[[ProgressMeter]]
-deps = ["Distributed", "Printf"]
-git-tree-sha1 = "afadeba63d90ff223a6a48d2009434ecee2ec9e8"
-uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
-version = "1.7.1"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
@@ -1916,15 +1435,15 @@ version = "1.1.1"
 
 [[RecipesPipeline]]
 deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
-git-tree-sha1 = "9b8e57e3cca8828a1bc759840bfe48d64db9abfb"
+git-tree-sha1 = "2a7a2469ed5d94a98dea0e85c46fa653d76be0cd"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.3.3"
+version = "0.3.4"
 
 [[RecursiveArrayTools]]
 deps = ["ArrayInterface", "ChainRulesCore", "DocStringExtensions", "LinearAlgebra", "RecipesBase", "Requires", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "b20384ee84f3e0e89cee36dbcb9c44b8bd61e133"
+git-tree-sha1 = "e205e8c50633f96dbc59d4ae760f4e9e4d445fdb"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "2.14.3"
+version = "2.14.5"
 
 [[RecursiveFactorization]]
 deps = ["LinearAlgebra", "LoopVectorization"]
@@ -1948,12 +1467,6 @@ deps = ["StaticArrays"]
 git-tree-sha1 = "622b3e491fb0a85fbfeed6f17dc320a9f46d8929"
 uuid = "ae5879a3-cd67-5da8-be7f-38c6eb64a37b"
 version = "1.1.0"
-
-[[Revise]]
-deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
-git-tree-sha1 = "410bbe13d9a7816e862ed72ac119bda7fb988c08"
-uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "3.1.17"
 
 [[Rmath]]
 deps = ["Random", "Rmath_jll"]
@@ -2002,9 +1515,9 @@ version = "0.0.1"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "7d60436171978e9b4f73790ebf436fccd307df51"
+git-tree-sha1 = "51a5896c36b6f8636b0d25d53f91607f5cc2dacf"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.14.0"
+version = "1.17.0"
 
 [[Scratch]]
 deps = ["Dates"]
@@ -2062,11 +1575,6 @@ git-tree-sha1 = "be20320958ccd298c98312137a5ebe75a654ebc8"
 uuid = "47a9eef4-7e08-11e9-0b38-333d64bd3804"
 version = "1.13.2"
 
-[[SpatialIndexing]]
-git-tree-sha1 = "fb7041e6bd266266fa7cdeb80427579e55275e4f"
-uuid = "d4ead438-fe20-5cc5-a293-4fd39a41b74c"
-version = "0.1.3"
-
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
 git-tree-sha1 = "a50550fa3164a8c46747e62063b4d774ac1bcf49"
@@ -2081,9 +1589,9 @@ version = "0.2.5"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "745914ebcd610da69f3cb6bf76cb7bb83dcb8c9a"
+git-tree-sha1 = "896d55218776ab8f23fb7b222a5a4a946d4aafc2"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.2.4"
+version = "1.2.5"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -2163,9 +1671,9 @@ version = "0.13.0"
 
 [[Symbolics]]
 deps = ["ConstructionBase", "DiffRules", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "Latexify", "Libdl", "LinearAlgebra", "MacroTools", "NaNMath", "RecipesBase", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "TreeViews"]
-git-tree-sha1 = "09066de1f9d3b2e1c9cdd9d147cc20bf625c022f"
+git-tree-sha1 = "713685972c3991b23a430fea59e32136140f2528"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-version = "1.2.1"
+version = "1.2.2"
 
 [[TOML]]
 deps = ["Dates"]
@@ -2187,12 +1695,6 @@ version = "1.4.4"
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
-[[TerminalLoggers]]
-deps = ["LeftChildRightSiblingTrees", "Logging", "Markdown", "Printf", "ProgressLogging", "UUIDs"]
-git-tree-sha1 = "d620a061cb2a56930b52bdf5cf908a5c4fa8e76a"
-uuid = "5d786b92-1e48-4d6f-9151-6b4477ca9bed"
-version = "0.1.4"
-
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -2205,14 +1707,14 @@ version = "0.4.4"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
-git-tree-sha1 = "9f494bc54b4c31404a9eff449235836615929de1"
+git-tree-sha1 = "209a8326c4f955e2442c07b56029e88bb48299c7"
 uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-version = "0.5.10"
+version = "0.5.12"
 
 [[Tokenize]]
-git-tree-sha1 = "37018506dc445ad7db288442fbb846105f26c43f"
+git-tree-sha1 = "eee92eda3cc8e104b7e56ff4c1fcf0d78ca37c89"
 uuid = "0796e94c-ce3b-5d07-9a54-7f471281c624"
-version = "0.5.17"
+version = "0.5.18"
 
 [[TreeViews]]
 deps = ["Test"]
@@ -2491,47 +1993,35 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╟─d59d8616-a224-11eb-043c-d1f9fbaa616e
-# ╟─af8b6ac7-7391-4662-adec-01ca03d94a30
-# ╟─684c3b78-a47c-4fba-9a80-e6a07bc5e799
-# ╠═afa41959-dbee-4e81-97a6-1717f476dd77
-# ╠═267edd09-82ea-4cf9-92e8-f871ac4f0f5c
-# ╠═46d550bc-713e-43af-8b2e-8ffa65d0e600
-# ╟─3813dffe-54fb-48a1-a5fb-9a6c81ed1ad7
-# ╟─50ee947b-7df3-4de6-9223-08bc1bd9398d
-# ╟─0e8c29c8-32d0-4b2b-aa20-e947cf36389c
-# ╟─de2eb7a9-3d36-42c0-b12a-f7f2303692f3
-# ╟─272d58f1-4d59-4243-8de3-326b02d4628a
-# ╠═72492b56-30f3-44ad-81ff-1b59fced5d47
-# ╟─c761130f-88e5-4375-abba-9b196c9b0a27
-# ╟─dd9efeb6-359a-428b-b2be-93f7a3735734
-# ╠═507a6e8c-52e2-4223-befc-82ad631af446
-# ╠═2319c22e-4417-4c0a-9b0b-b951a8bf58f4
-# ╟─b489caad-6f05-4e1f-88a9-3c008e4ba98c
-# ╟─a4538dea-2e55-42c6-8573-e77c75607e7c
-# ╠═fb847908-ee98-447e-ae03-23afd0b9d9e4
-# ╟─8786e7d8-9d78-4b7c-bd19-d221a471a32a
-# ╠═c850a977-9fab-4014-8887-6667e64e079a
-# ╠═bd964ca0-534b-46b8-8538-d582186c1f94
-# ╠═88d150e7-609c-4a5f-a0fc-48cbae74b10b
-# ╟─da51983c-d826-4ac3-a38c-51b9e6444f79
-# ╟─36b46ffb-bcb0-43d4-a08b-fd8c9dda185f
-# ╟─8c772140-a05c-47cb-aac5-2149a28fc151
-# ╟─0929f835-bef5-462b-9477-c95f70dcd2ba
-# ╟─2b852e42-915f-4088-89c1-bf5436384b13
-# ╠═a9092c8c-b3b2-4608-99c3-8cc73d7816f3
-# ╟─39b25fb5-89c0-46aa-b521-de42989a942c
-# ╠═6bae2db8-3ba3-46aa-b65b-a75ca21a3d05
-# ╟─3fc0b719-850f-481c-935d-ca4af12a6c53
-# ╠═286dad18-e175-4eae-91e7-667f6a6d944e
-# ╟─f8d40fa2-73f1-4a3d-b081-846324f10e38
-# ╟─9e5cd21c-23ac-4cf1-97f6-48b1647e7359
-# ╠═a0739712-bd5b-49b0-a9ae-9da5bac7c345
-# ╟─35b796d2-2780-4190-b8d6-5d507083cc38
-# ╟─1444c267-8f14-4194-a2af-031f406d90fd
-# ╠═715dd0bb-cb36-4bab-b53e-bdbeb2ed8d51
-# ╟─7d2894c5-5670-42da-9225-34d29583fd74
-# ╟─25158dd7-ee8f-4781-8c6d-a8b1c9bbe657
-# ╠═6ad80a71-fbd2-42e9-8254-a85f2c6ee228
+# ╟─b3fe30f8-da70-11eb-1812-7588a33ee364
+# ╟─f15b2df7-85c8-49cd-8bd6-65c3dbd8298f
+# ╟─be3e37aa-df5e-46bb-a50d-024622c5c3dc
+# ╟─04094a20-bcee-4607-93bd-e2f525c5f964
+# ╟─67244ee6-8326-4828-92a2-de839fe8d274
+# ╟─707d5dc6-1863-4b02-9910-44c0c01e4d8c
+# ╟─65435b1e-d80f-4015-a547-96ff2a57e3bb
+# ╟─749f7e4e-c1b5-4a2b-9ed3-862dc27a3b44
+# ╟─467c6cfc-9e8f-481d-920f-058a72634f92
+# ╟─1e767321-8109-4a66-ae8d-63be42698d61
+# ╠═027baa6a-9261-416b-9189-b92aa18cf979
+# ╟─4531bfd2-9ed6-49a0-8d6b-1df146e72151
+# ╟─19af281a-ba06-4184-beee-a70967f00093
+# ╠═628a98a7-a612-4a8c-802c-a8f35483fb8c
+# ╟─dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
+# ╟─6227f2be-3b59-4681-9af0-8d5bbd0b12d5
+# ╟─122a8208-55e1-4c93-9e4d-0321ff9d84e3
+# ╠═41600e94-260a-43c5-ac1e-aa7e0d7e8f09
+# ╟─336249c2-bdae-487e-aff3-184c7b0f0a10
+# ╟─916a959e-062e-410a-896d-9913f2cb0650
+# ╠═5cec4b12-2e54-4eab-9de5-01c55df01a0c
+# ╟─4a3a9e5e-5340-476e-96ce-301ba16a74b6
+# ╠═140901f7-2245-4e25-a490-d6f930620797
+# ╟─b8deb78a-378f-4c94-b6e3-7a4b69faeabe
+# ╠═a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
+# ╟─889e034b-c076-4ace-8d37-c2fc1c141d25
+# ╟─e78ceb55-01a0-4d44-8f21-d2b47cf82775
+# ╠═a179f8ce-0f85-4b03-9d3b-47e5c2d0274f
+# ╠═6c5cbf65-296e-49a1-968b-96e783c2cc83
+# ╠═74092742-ccbd-4661-8ca6-15ce789244fe
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -22,6 +22,7 @@ begin
 	using Rotations
 	using Symbolics
 	using StaticArrays
+	using LinearAlgebra
 	using DifferentialEquations
 	using Unitful, UnitfulAstro 
 	using AstrodynamicalModels 	   
@@ -58,9 +59,8 @@ md"""
 ## How can we navigate to Jupiter?
 _Where do we even start?_
 
-- GPS won't work!
-- We have knowledge learned from astrodynamics coursework, research, and online resources
-* We also have `GeneralAstrodynamics.jl`
+- Astrodynamics coursework, research, and online resources
+- A new Julia package, `GeneralAstrodynamics.jl`
 """
 
 # ╔═╡ 04094a20-bcee-4607-93bd-e2f525c5f964
@@ -77,7 +77,7 @@ md"""
 _As a field, astrodynamics is incredibly demanding of scientific computing._
 
 * Calculations are expensive, e.g. numerical integration, iterative solvers
-* Data may be large, e.g. planetary ephemeris
+* Data may be large, e.g. solar system ephemeris
 * Equations are complicated, e.g. analytical Halo orbit approximations
 * Unit errors are an easy trap!
 
@@ -100,7 +100,7 @@ html"""
 
 # ╔═╡ 65435b1e-d80f-4015-a547-96ff2a57e3bb
 md"""
-## Let's plan a Jupiter mission!
+## Let's plan a trip to Jupiter!
 _Introducing Astrodynamics research alongside GeneralAstrodynamics.jl!_
 
 ### Goals
@@ -113,65 +113,91 @@ _Introducing Astrodynamics research alongside GeneralAstrodynamics.jl!_
 
 
 $(PlutoUI.LocalResource(joinpath("media", "generalastrodynamics.jpg"), :width=>"85%", :style=>"margin-left: auto; margin-right: auto; display: block;"))
+
+"""
+
+# ╔═╡ 749f7e4e-c1b5-4a2b-9ed3-862dc27a3b44
+html"""
+<div style="text-align: center;">
+<p><i>
+Image credit to <a href=https://twitter.com/code_typed/status/1391454924442046464?s=20>Twitter's</a> new GitHub Card format.
+</i></p>
+</div>
+"""
+
+# ╔═╡ 525e8d49-7559-4e5f-8a63-01d29266a3fd
+md"""
+## Unicode, Units, and Speed – Oh My!
+_Right off the bat, Julia helps a lot._
+
+
+### Unicode Characters Help with Equations
+
+* Equations are mathematically expressive!
+
+```julia
+ṙ = -μ * (r / norm(r))
+```
+
+### Unit Handling with `Unitful.jl`
+
+* `Unitful.jl` and extensions (`UnitfulAstro.jl`, `UnitfulAngles.jl`) are the best unit handling packages I've seen yet
+
+```julia
+using LinearAlgebra, Unitful
+r = [0.0, 11_500, 0.0]u"km"
+norm(r) == 11_500_000u"m"
+```
+
+### Multiple Dispatch and Speed
+
+* Type stable code is really fast!
+* Julia's type system allows for writing equations based on `Orbit` types
+
+```julia
+period(a, μ) = 2π * √(a^3 / μ)
+period(orbit::Orbit) = period(semimajor_axis(orbit), mass_parameter(orbit.system))
+period(orbit::Orbit{Parabolic} = Inf * timeunit(orbit.state)
+period(orbit::Orbit{Hyperbolic} = NaN * timeunit(orbit.state)
+```
+
+
+
 """
 
 # ╔═╡ 467c6cfc-9e8f-481d-920f-058a72634f92
 md"""
 
-## Equations of Motion
+## Equations of Motion (R2BP)
 _How will our spacecraft move?_
 
 
-### Numerical Integration Procedure
-1. Type the equations of motion into some function
+### Restricted Two-body Problem
+
+Assume your spacecraft is only pulled by the gravity of __one__ celestial body. Let $\mathbf{r}$, $\mathbf{v}$, $\mu$ be the spacecraft's position, spacecraft's velocity, and celestial body's mass parameter respectively.
 
 $\begin{aligned}
-\dot{r} &= v \\
-\dot{v} &= -\mu \frac{r}{||r||}
+\mathbf{\dot{r}} &= \mathbf{v} \\
+\mathbf{\dot{v}} &= -\mu \frac{\mathbf{r}}{||\mathbf{r}||}
 \end{aligned}$
 
-2. Create an `ODEProblem`, and `solve` the problem using `DifferentialEquations.jl`
+Write these dynamics into a function, and plug that function into a numerical integrator (i.e. the excellent `DifferentialEquations.jl`) __simulate__ (a.k.a. __propagate__) your dynamics forward or backward in time.
 
-!!! hint "Tip"
-	If your self-coded function allocates memory, your numerical integration __will__ be sub-optimal! Use `ModelingToolkit.jl` to generate fast functions for you!
 
-	Common models within astrodynamics have been added to `AstrodynamicalModels.jl`!
+!!! tip
+	If your self-coded function allocates memory, your numerical integration __will__ be sub-optimal. Use `ModelingToolkit.jl` and `AstrodynamicalModels.jl` to generate fast functions for you!
 
-### Revised Procedure
-
-```julia
-# Make a ModelingToolkit.ODESystem, or import AstrodynamicalModels
-using AstrodynamicalModels
-
-# Propagate using DifferentialEquations
-problem    = ODEProblem(R2BPVectorField, vcat(r,v), (0.0, T), (μ,))
-trajectory = solve(problem; reltol=1e-14, abstol=1e-14)
-
-# Propagate using GeneralAstrodynamics
-orbit 	   = Orbit(r, v, μ)
-trajectory = propagate(orbit, T)
-
-```
 
 """
 
 # ╔═╡ 1e767321-8109-4a66-ae8d-63be42698d61
 md"""
-## Orbit  Propagation
-_Let's practice by propagating a parking orbit about Earth!_
+## Orbit Propagation
+_Practically out-of-the-box!_
 
+* `GeneralAstrodynamics.jl` uses `AstrodynamicalModels.jl` to wrap the numerical integrators in `DifferentialEquations.jl` for easy-to-type orbit propagation
+* That sounds like a mouthful, but look how simple it is!
 """
-
-# ╔═╡ 027baa6a-9261-416b-9189-b92aa18cf979
-begin
-	
-	parking = Orbit(0, 6575u"km", 30u"°", 0u"°", 0u"°", 0u"°", Earth)
-	parking = CartesianOrbit(parking)
-
-	plotpositions(propagate(parking); label="Spacecraft", size=(600,350))
-	scatter!([0], [0], [0]; color=:green, label="Earth CoM")
-	
-end
 
 # ╔═╡ 4531bfd2-9ed6-49a0-8d6b-1df146e72151
 md"""
@@ -185,13 +211,341 @@ _The first interplanetary transfer design they teach you!_
 | $v_1$ | Initial spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_1} - \frac{2\mu}{r_1+r_2}}$ | 
 | $v_2$ | Final spacecraft velocity w.r.t. Sun | $\sqrt{\frac{2\mu}{r_2} - \frac{2\mu}{r_1+r_2}}$ | 
 
+"""
+
+# ╔═╡ 19af281a-ba06-4184-beee-a70967f00093
+let
+	r₁ = uconvert(u"km", normalized_length_unit(SunEarth))
+	r₂ = uconvert(u"km", normalized_length_unit(SunJupiter))
+	μ  = mass_parameter(Sun)
+	
+	v₀ = √(μ/r₁)
+	v₃ = √(μ/r₂)
+	v₁ = √((2μ/r₁) - (2μ/(r₁+r₂)))
+	v₂ = √((2μ/r₂) - (2μ/(r₁+r₂)))
+	T  = period(r₁+r₂, μ) / 2
+	
+	transfer = let 
+		r = [r₁, zero(r₁), zero(r₁)]
+		v = [zero(v₁), v₁, zero(v₁)]
+		Orbit(r, v, Sun)
+	end
+	
+	Δv₁ = abs(v₁ - v₃)
+	Δv₂ = abs(v₃ - v₂)
+	Δv  = round(ustrip(u"km/s", Δv₁ + Δv₂); digits=4)
+	
+	trajectory = propagate(transfer, period(transfer)/2)
+	
+	x = map(step -> step.state.r[1], trajectory)
+	y = map(step -> step.state.r[2], trajectory)
+	
+	plot(x, y; title = "Hohmann Transfer (Cost: $(Δv) km/s)",
+		 linewidth=2, label="Spacecraft Position", arrow=true,
+		 xlabel="X (km)", ylabel="Y (km)",
+		 aspect_ratio=1.0, size=(600,350))
+	
+	scatter!([ustrip(u"km", r₁)], [0]; color=:green, label="Earth")
+	scatter!([-ustrip(u"km", r₂)], [0]; color=:purple, label="Jupiter")
+	scatter!([0], [0]; color=:orange, label="Sun")
+	
+end
+
+# ╔═╡ 628a98a7-a612-4a8c-802c-a8f35483fb8c
+md"""
+## More Equations of Motion (CR3BP)
+_Interplanetary superhighways, under active research!_
+
+* A more advanced interplanetary transfer concept uses __Circular Restricted Three-body__ dynamics
+
+$\begin{align}
+    r_1 & = \sqrt{(x^\star+\mu^\star)^2 + (y^\star)^2 + (z^\star)^2} \\
+    r_2 & = \sqrt{(x^\star+\mu^\star-1)^2 + (y^\star)^2 + (z^\star)^2} \\
+    \ddot{x}^\star & = 2\dot{y}^\star + x^\star - \frac{(1-\mu^\star)(x^\star + \mu^\star)}{r_1^3} - 
+        \frac{\mu^\star (x^\star - 1 + \mu^\star)}{r_2^3} \\
+    \ddot{y}^\star & = -2\dot{x}^\star + y^\star - \frac{(1 - \mu^\star)y^\star}{r_1^3} - \frac{\mu^\star y^\star}{r_2^3} \\
+    \ddot{z}^\star & = -\frac{(1-\mu^\star)z^\star}{r_1^3} - \frac{\mu^\star z^\star}{r_2^3}
+\end{align}$
 
 """
 
-# ╔═╡ 5c88a3b7-ebcb-4518-a23c-8b42937a0ef4
-md"""
-## Mission Overview
+# ╔═╡ dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
+html"""
+<figure>
+<img src="https://www.nasa.gov/images/content/63114main_highway_med.jpg" alt="Invariant Manifolds in Space" style="display: block; margin-left: auto; margin-right: auto; width: 55%; border-radius: 5%; ">
+<figcaption style="text-align: center; font-style: italic;">
+Image credit to <a href="https://www.nasa.gov/mission_pages/genesis/media/jpl-release-071702.html">NASA's</a> overview page on manifold transfer designs.
+</figcaption>
+</figure>
 
+
+
+"""
+
+# ╔═╡ e3ee34cc-b4f4-4a4a-9f67-e3e4da7320e4
+md"""
+## Lagrange Points
+_The equilibrium points of CR3BP dynamics._
+
+* Like any equilibrium points, they can be __stable__ or __unstable__, and they can have __periodic orbits__
+
+"""
+
+# ╔═╡ 008d20d8-1ae7-41c0-8e32-25f6b44c200e
+md"""
+
+__System:__ $(@bind lagrange_plot_sys PlutoUI.Select([
+	"Earth-Moon" => "Earth-Moon",
+	"Sun-Earth" => "Sun-Earth",
+	"Sun-Mars" => "Sun-Mars",
+	"Sun-Jupiter" => "Sun-Jupiter"
+])) 
+
+"""
+
+# ╔═╡ a3a1e01d-f524-43e1-9ca8-24f38ec4d8ec
+let 
+	
+	if lagrange_plot_sys == "Earth-Moon"
+		sys = EarthMoon
+	elseif lagrange_plot_sys == "Sun-Earth"
+		sys = SunEarth
+	elseif lagrange_plot_sys == "Sun-Mars"
+		sys = SunMars
+	else
+		sys = SunJupiter
+	end
+	
+	# Plot lagrange points
+	figure = lagrangeplot(sys)
+	
+	# Plot centers of mass
+	plotbodies!(figure, sys; legend = :topright)
+	
+end
+
+# ╔═╡ 81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
+md"""
+## Periodic Orbits about Lagrange Points
+_Just like any other dynamics!_
+
+__System:__ $(@bind halo_attr_sys PlutoUI.Select([
+	"Earth-Moon" => "Earth-Moon",
+	"Sun-Earth" => "Sun-Earth",
+	"Sun-Mars" => "Sun-Mars",
+	"Sun-Jupiter" => "Sun-Jupiter"
+])) 
+   __Lagrange Point:__ $(@bind halo_attr_lagrange PlutoUI.Select([
+	"1" => "1", 
+	"2" => "2"
+]))
+__Z-axis Amplitude:__ $(@bind halo_attr_amp PlutoUI.NumberField(0.0:0.0001:0.05; default = 0.005))
+"""
+
+# ╔═╡ 23dd6d62-09ab-436e-8bd1-360d9a0b9997
+let 
+	if halo_attr_sys == "Earth-Moon"
+		sys = EarthMoon
+	elseif halo_attr_sys == "Sun-Earth"
+		sys = SunEarth
+	elseif halo_attr_sys == "Sun-Mars"
+		sys = SunMars
+	else
+		sys = SunJupiter
+	end
+	
+	μ  = normalized_mass_parameter(sys)
+	LU = (string ∘ normalized_length_unit)(sys)
+	Az = halo_attr_amp
+	L  = parse(Int, halo_attr_lagrange)
+	
+	rₐ, vₐ, Tₐ = analyticalhalo(μ; Az = Az, L = L, steps = 1000)
+	
+	fig = plotpositions((collect ∘ eachrow)(rₐ); 
+						title  = "Halo Orbit about $(sys.name) L$L",
+						label  = "Analytical Solution",
+						xlabel = "X ($LU)", 
+						ylabel = "Y ($LU)", 
+						zlabel = "Z ($LU)",
+						dpi    = 200)
+
+	options = (; reltol = 1e-14, abstol = 1e-14, saveat=1e-2)
+	traj = propagate(halo(EarthMoon; Az = Az, L = L)...; options...)
+	
+	plotpositions!(fig, traj; label = "Numerical Solution", dpi=90)
+		
+	scatter!(fig, map(el->[el], lagrange(EarthMoon)[1])...; markershape=:x, label="L$L")
+	
+	fig
+end
+
+# ╔═╡ 339e8eff-b020-494f-89a1-bd174d198050
+md"""
+### Halo Solver Usage
+
+```julia
+# Analytical Approximation (not numerically periodic)
+r, v, T  = analyticalhalo(μ; Az = 0.005, L = 1, hemisphere = :northern)
+
+# Numerically Periodic (found with iterative differential correction)
+orbit, T = halo(μ; Az = 0.005, L = 2, hemisphere = :southern) 
+```
+"""
+
+# ╔═╡ 2a1f751a-9602-4caf-b27b-3650beb3bd05
+md"""
+## Manifold Transfer Concept
+_Manifold-based interplanetary missions are a $3$ step process._
+
+1. Launch from Earth into a __stable manifold__ within the Sun-Earth system
+2. Perturb from the Sun-Earth Halo onto an __unstable manifold__
+3. Transfer onto a __stable manifold__ of the desired destination Halo orbit
+
+__Mission Phase:__ $(@bind mission_phase PlutoUI.Select([
+	"Phase One" => "Phase One",
+	"Phase Two" => "Phase Two",
+	"Phase Three" => "Phase Three"
+])) 
+
+"""
+
+# ╔═╡ f6748587-f37b-4510-b7d7-d3a650acc36f
+let
+
+	if mission_phase == "Phase One"
+		
+		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
+		@time manifold = stable_manifold(orbit, T; num_trajectories = 50, duration=T, eps=-1e-7)
+		
+		LU  = (string ∘ normalized_length_unit)(orbit.system)
+		fig = plot(; title = "Phase #1: Earth to Sun-Earth Halo", 
+			   		 xlabel = "X ($LU)", ylabel = "Y ($LU)",
+					 dpi = 250, legend = :topright)
+		
+		scatter!(fig, map(el->[el], secondary_synodic_position(orbit)[1:2])...; 
+				 label = "Earth")
+		
+		scatter!(fig, map(el->[el], lagrange(SunEarth, 2)[1:2])...; 
+				 markershape = :x, label = "Sun-Earth L2")
+		
+		for trajectory ∈ manifold
+			plotpositions!(fig, trajectory; 
+						   exclude_z  = true,
+						   label     = :none, 
+						   palette   = :blues, 
+				           linestyle = :dot,
+						   aspect_ratio = 1)
+		end
+		
+		plotpositions!(fig, propagate(orbit, T); 
+					   linewidth = 3, color = :black, legend = :topleft, 
+					   label = "Halo Orbit", exclude_z = true, aspect_ratio=1)
+		
+		fig
+		
+	elseif mission_phase == "Phase Two"
+		
+		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
+		manifold = unstable_manifold(orbit, T; 
+									 num_trajectories=100, 
+									 duration=3T, eps=1e-6, saveat=1e-2);	
+		
+		LU  = (string ∘ normalized_length_unit)(orbit.system)
+		fig = plot(; title = "Phase #2: Sun-Earth Halo to Transfer Orbit", 
+			   		 xlabel = "X ($LU)", ylabel = "Y ($LU)", zlabel = "Z ($LU)",
+			   		 dpi = 250, legend = :topright)
+		
+		for trajectory ∈ manifold
+			plotpositions!(fig, trajectory; 
+						   exclude_z  = true,
+						   label     = :none, 
+						   palette   = :blues, 
+				           linestyle = :dot,
+						   aspect_ratio = 1)
+		end
+		
+		plotpositions!(fig, propagate(orbit, T); 
+					   linewidth = 3, color = :black, legend = :topright,
+					   label = "Halo Orbit", exclude_z = true)
+		
+		fig
+		
+	elseif mission_phase == "Phase Three"
+		
+		orbit, T = halo(SunJupiter; Az=300_000u"km", L=1)
+		manifold = stable_manifold(orbit, T; num_trajectories = 50,
+								   duration=2.7T, eps=1e-8, saveat=1e-2);	
+		
+		LU  = (string ∘ normalized_length_unit)(orbit.system)
+		fig = plot(; title = "Phase #3: Transfer Orbit to Sun-Jupiter Halo",
+				     xlabel = "X ($LU)", ylabel = "Y ($LU)", zlabel = "Z ($LU)",
+			   		 dpi = 250, legend = :topright)
+		
+		scatter!(fig, map(el->[el], secondary_synodic_position(orbit)[1:3])...; 
+				 label = "Jupiter", color = :purple)
+		
+		for trajectory ∈ manifold
+			plotpositions!(fig, trajectory; 
+						   exclude_z  = false,
+						   label     = :none, 
+						   palette   = :reds, 
+				           linestyle = :dot,
+						   aspect_ratio = 1)
+		end
+		
+		plotpositions!(fig, propagate(orbit, T); 
+					   linewidth = 3, color = :black, legend = :topleft,
+					   label = "Halo Orbit", exclude_z = false)
+		
+		fig
+		
+	end
+	
+	
+end
+
+# ╔═╡ c54ec985-95dc-49f7-bbb9-23c89208a5a9
+md"""
+## Conclusions
+_Julia and its package ecosystem let me be a (productive) lazy astrodynamics developer._
+
+### Language Features
+* Julia's speed, unicode character support, and clever type system with multiple dispatch allow for fast, mathematically expressive, and easy-to-type astrodynamics code
+
+### Ecosystem Packages
+* `Unitful.jl` and associated extensions are fantastic unit-handling packages
+* `DifferentialEquations.jl`, `ModelingToolkit.jl`, and model packages like `AstrodynamicalModels.jl` let you type dynamics for __correctness__, not __computational efficiency__
+* `Plots.jl` is very simple to use
+
+### Interested in Astrodynamics? Help out!
+* I've had a lot of fun developing `GeneralAstrodynamics.jl`, and there's more work to do! 
+* Don't be shy about filing issues, making pull requests, and otherwise contacting me if you're interested in helping out with features. No astrodynamics experience is required!
+
+!!! note "Psst!"
+	Hey everyone, switch your Twitter handles to your favorite Julia macros!
+
+
+"""
+
+# ╔═╡ 0edb894e-1388-438c-bd46-8a7443b3f114
+md"""
+## Credits
+_Thanks, all!_
+
+* The Julia Programming Language, `Unitful.jl`, `UnitfulAstro.jl`, `DifferentialEquations.jl`, and `ModelingToolkit.jl` are __excellent__ tools for scientific computing
+
+
+* `Pluto.jl` and `PlutoUI.jl` are excellent packages for showing demos and concepts, and for JuliaCon presentations 😁
+
+
+* Thanks to Dr. Barbee for continued guidance relating to finding periodic orbits, and designing manifold-based interplanetary transfers
+
+
+* Thanks to Dr. Mireles for providing well-explained and publicly available notes and periodic orbit-finding MATLAB code on his [website](http://cosweb1.fau.edu/~jmirelesjames/notes.html)
+
+
+!!! tip "Finally..."
+	__Thank you to all of you for watching!__
 
 """
 
@@ -204,12 +558,6 @@ md"""
 	 html"<button onclick=present()>Toggle Presentation</button>"
 
 
-
-# ╔═╡ 41600e94-260a-43c5-ac1e-aa7e0d7e8f09
-md"""
-## Credits
-
-"""
 
 # ╔═╡ 336249c2-bdae-487e-aff3-184c7b0f0a10
 md"""
@@ -238,42 +586,22 @@ macro terminal(expr)
 	end
 end;
 
-# ╔═╡ 19af281a-ba06-4184-beee-a70967f00093
-begin
-	r₁ = uconvert(u"km", normalized_length_unit(SunEarth))
-	r₂ = uconvert(u"km", normalized_length_unit(SunJupiter))
-	μ  = mass_parameter(Sun)
+# ╔═╡ 572913c1-d221-4e03-99cc-e9f0086879d3
+@terminal print(@doc AstrodynamicalModels.R2BP)
+
+# ╔═╡ 027baa6a-9261-416b-9189-b92aa18cf979
+let r = randn(3) .* 10_000, v = randn(3)
+
+	orbit      = Orbit(r, v, Earth) 
+	duration   = conic(orbit) ∈ (Circular, Elliptical) ? period(orbit) : 10_000u"s"
 	
-	v₁ = √((2μ/r₁) - (2μ/(r₁+r₂)))
-	v₂ = √((2μ/r₂) - (2μ/(r₁+r₂)))
-	T  = period(r₁+r₂, μ) / 2
-	
-	transfer = let 
-		r = normalize(ustrip.(u"km",   position_vector(parking))) .* r₁
-		v = normalize(ustrip.(u"km", position_vector(parking))) .* v₁
-		Orbit(r, v, Sun)
+	trajectory = propagate(orbit, duration)
+
+	@terminal let
+		@show orbit
+		@show trajectory
+		@show trajectory[1] ≈ trajectory[end]
 	end
-	
-	
-	trajectory = propagate(transfer, period(transfer)/2)
-	
-	@terminal print(trajectory)
-end
-
-# ╔═╡ 0e8dc854-f6ef-48c8-b50b-9f491e265f09
-let
-	x = map(step -> step.state.r[1], trajectory)
-	y = map(step -> step.state.r[2], trajectory)
-	
-	plot(x, y; 
-		 linewidth=2, label="Spacecraft Position", 
-		 xlabel="X (km)", ylabel="Y (km)",
-		 aspect_ratio=1.0)
-	
-	scatter!([ustrip(u"km", r₁)], [0]; color=:green, label="Earth")
-	scatter!([ustrip(u"km", r₂)], [0]; color=:purple, label="Jupiter")
-
-
 end
 
 # ╔═╡ b8deb78a-378f-4c94-b6e3-7a4b69faeabe
@@ -306,86 +634,6 @@ let ν = 0.0
 	
 end
 
-# ╔═╡ 889e034b-c076-4ace-8d37-c2fc1c141d25
-md"""
-# Drafts
-"""
-
-# ╔═╡ e78ceb55-01a0-4d44-8f21-d2b47cf82775
-md"""
-
-## Mission Specifications
-
-| Mission Detail | Value |
-| -------------- | ----- |
-| __Departure Planet:__ | $(@bind departure_planet_str PlutoUI.Select(["Venus", "Earth", "Mars", "Jupiter"], default = "Earth")) |
-| __Arrival Planet:__ | $(@bind arrival_planet_str PlutoUI.Select(["Venus", "Earth", "Mars", "Jupiter"], default = "Jupiter")) |
-
-"""
-
-# ╔═╡ a179f8ce-0f85-4b03-9d3b-47e5c2d0274f
-begin
-	
-	depart = eval(Symbol("Sun" * departure_planet_str))
-	arrive = eval(Symbol("Sun" * arrival_planet_str))
-	
-end;
-
-# ╔═╡ 6c5cbf65-296e-49a1-968b-96e783c2cc83
-begin
-	
-	depart_halo = halo(depart; Az = 500_000u"km",  L = 2)
-	arrive_halo = halo(arrive; Az = 200_000u"km",  L = 1)
-	
-end;
-
-# ╔═╡ 74092742-ccbd-4661-8ca6-15ce789244fe
-function CR3BPtoR2BP(orb::CR3BPOrbit, body_index::Int, body::R2BPSystem; 
-			  frame = Inertial, i = 0u"°")
-
-	@assert body_index ∈ (1,2) "Second argument must be 1 or 2."
-	
-	# Normalized, synodic reference frame
-	orbit = (synodic ∘ normalize)(orb)
-	
-	# Spacecraft state (Synodic, normalized)
-	rₛ = position_vector(orbit)
-	vₛ = velocity_vector(orbit)
-	tₛ = epoch(orbit.state)
-	
-	# Body state (Synodic, normalized)
-	rᵢ = body_index == 1 ? primary_synodic_position(orbit) : 
-						   secondary_synodic_position(orbit)
-	
-	# Synodic to bodycentric inertial
-	rₛ = inertial(rₛ - rᵢ, tₛ) |> MVector
-	vₛ = inertial(vₛ + MVector{3}(0,0,1) × rᵢ, tₛ) |> MVector
-	
-	# Canonical to dimensioned
-	DU = normalized_length_unit(orbit)
-	TU = normalized_time_unit(orbit)
-	rₛ = rₛ .* DU
-	vₛ = vₛ .* DU/TU
-	tₛ = tₛ  * TU
-	
-	# Rotate about x by the inclination angle i
-	Rx = transpose(RotX(i)) 
-	rₛ = Rx * rₛ
-	vₛ = Rx * vₛ
-	
-	# Cartesian state
-	state = CartesianState(
-		uconvert.(u"km", rₛ), 
-		uconvert.(u"km/s", vₛ), 
-		uconvert(u"s", tₛ), 
-		frame
-	)
-	
-	# Orbit structure
-	return R2BPOrbit(state, body)
-	
-end;
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -393,6 +641,7 @@ AstrodynamicalModels = "4282b555-f590-4262-b575-3e516e1493a7"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 GeneralAstrodynamics = "8068df5b-8501-4530-bd82-d24d3c9619db"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
@@ -404,9 +653,9 @@ UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
 [compat]
 AstrodynamicalModels = "~0.2.6"
 DifferentialEquations = "~6.17.2"
-GeneralAstrodynamics = "~0.9.5"
+GeneralAstrodynamics = "~0.9.7"
 Latexify = "~0.15.6"
-Plots = "~1.18.0"
+Plots = "~1.18.1"
 PlutoUI = "~0.7.9"
 Rotations = "~1.0.2"
 StaticArrays = "~1.2.5"
@@ -863,9 +1112,9 @@ version = "0.57.3+0"
 
 [[GeneralAstrodynamics]]
 deps = ["AstrodynamicalModels", "CSV", "ComponentArrays", "Contour", "Crayons", "DataFrames", "DelimitedFiles", "DifferentialEquations", "Distributed", "DocStringExtensions", "Interpolations", "LinearAlgebra", "Logging", "PhysicalConstants", "Plots", "Reexport", "Roots", "SciMLBase", "StaticArrays", "SymbolicUtils", "Symbolics", "Unitful", "UnitfulAngles", "UnitfulAstro"]
-git-tree-sha1 = "d98a705dca707e087ef4ddf85d58cd510fe71f2f"
+git-tree-sha1 = "d802ca1208f2b57f208fb0678a1ff8b951dacd6a"
 uuid = "8068df5b-8501-4530-bd82-d24d3c9619db"
-version = "0.9.5"
+version = "0.9.7"
 
 [[GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -1328,9 +1577,9 @@ version = "1.0.11"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "9f126950870ef24ce75cdd841f4b7cf34affc6d2"
+git-tree-sha1 = "b93181645c1209d912d5632ba2d0094bc00703ad"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.18.0"
+version = "1.18.1"
 
 [[PlutoUI]]
 deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
@@ -1502,9 +1751,9 @@ version = "0.0.1"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "51a5896c36b6f8636b0d25d53f91607f5cc2dacf"
+git-tree-sha1 = "50294d98330855582e52f19e21196fc5b6099415"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.17.0"
+version = "1.17.1"
 
 [[Scratch]]
 deps = ["Dates"]
@@ -1548,9 +1797,9 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[SortingAlgorithms]]
 deps = ["DataStructures"]
-git-tree-sha1 = "2ec1962eba973f383239da22e75218565c390a96"
+git-tree-sha1 = "b3363d7460f7d098ca0912c69b082f75625d7508"
 uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
-version = "1.0.0"
+version = "1.0.1"
 
 [[SparseArrays]]
 deps = ["LinearAlgebra", "Random"]
@@ -1987,16 +2236,28 @@ version = "0.9.1+5"
 # ╟─67244ee6-8326-4828-92a2-de839fe8d274
 # ╟─707d5dc6-1863-4b02-9910-44c0c01e4d8c
 # ╟─65435b1e-d80f-4015-a547-96ff2a57e3bb
+# ╟─749f7e4e-c1b5-4a2b-9ed3-862dc27a3b44
+# ╟─525e8d49-7559-4e5f-8a63-01d29266a3fd
 # ╟─467c6cfc-9e8f-481d-920f-058a72634f92
+# ╠═572913c1-d221-4e03-99cc-e9f0086879d3
 # ╟─1e767321-8109-4a66-ae8d-63be42698d61
 # ╠═027baa6a-9261-416b-9189-b92aa18cf979
 # ╟─4531bfd2-9ed6-49a0-8d6b-1df146e72151
-# ╠═19af281a-ba06-4184-beee-a70967f00093
-# ╟─5c88a3b7-ebcb-4518-a23c-8b42937a0ef4
-# ╠═0e8dc854-f6ef-48c8-b50b-9f491e265f09
+# ╟─19af281a-ba06-4184-beee-a70967f00093
+# ╟─628a98a7-a612-4a8c-802c-a8f35483fb8c
+# ╟─dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
+# ╟─e3ee34cc-b4f4-4a4a-9f67-e3e4da7320e4
+# ╟─008d20d8-1ae7-41c0-8e32-25f6b44c200e
+# ╟─a3a1e01d-f524-43e1-9ca8-24f38ec4d8ec
+# ╟─81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
+# ╟─23dd6d62-09ab-436e-8bd1-360d9a0b9997
+# ╟─339e8eff-b020-494f-89a1-bd174d198050
+# ╟─2a1f751a-9602-4caf-b27b-3650beb3bd05
+# ╟─f6748587-f37b-4510-b7d7-d3a650acc36f
+# ╟─c54ec985-95dc-49f7-bbb9-23c89208a5a9
+# ╟─0edb894e-1388-438c-bd46-8a7443b3f114
 # ╟─6227f2be-3b59-4681-9af0-8d5bbd0b12d5
 # ╟─122a8208-55e1-4c93-9e4d-0321ff9d84e3
-# ╠═41600e94-260a-43c5-ac1e-aa7e0d7e8f09
 # ╟─336249c2-bdae-487e-aff3-184c7b0f0a10
 # ╟─916a959e-062e-410a-896d-9913f2cb0650
 # ╠═5cec4b12-2e54-4eab-9de5-01c55df01a0c
@@ -2004,10 +2265,5 @@ version = "0.9.1+5"
 # ╠═140901f7-2245-4e25-a490-d6f930620797
 # ╟─b8deb78a-378f-4c94-b6e3-7a4b69faeabe
 # ╠═a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
-# ╟─889e034b-c076-4ace-8d37-c2fc1c141d25
-# ╟─e78ceb55-01a0-4d44-8f21-d2b47cf82775
-# ╠═a179f8ce-0f85-4b03-9d3b-47e5c2d0274f
-# ╠═6c5cbf65-296e-49a1-968b-96e783c2cc83
-# ╠═74092742-ccbd-4661-8ca6-15ce789244fe
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
