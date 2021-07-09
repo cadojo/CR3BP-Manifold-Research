@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.0
+# v0.15.1
 
 using Markdown
 using InteractiveUtils
@@ -44,11 +44,11 @@ using GeneralAstrodynamics # a new package for common astrodynamics calculations
 html"""
 <div style="font-size: larger;">
 <ul>
-<li><p><a href="jcarpinelli.dev">Joe Carpinelli</a> </p>
+<li><p><a href="https://jcarpinelli.dev">Joe Carpinelli</a> </p>
 </li>
 <li><p>Title à la <a href="https://docs.poliastro.space/en/stable/examples/Going%20to%20Mars%20with%20Python%20using%20poliastro.html">Going to Mars with Python using poliastro</a></p>
 </li>
-<li><p>Presented at <a href="juliacon.org">JuliaCon</a> <span class="tex"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="SVG" role="presentation" tabindex="0" ctxtmenu_counter="2" style="position: relative;"><svg xmlns="http://www.w3.org/2000/svg" width="4.525ex" height="1.557ex" role="img" focusable="false" viewBox="0 -666 2000 688" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" style="vertical-align: -0.05ex;"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="matrix(1 0 0 -1 0 0)"><g data-mml-node="math"><g data-mml-node="mn"><use xlink:href="#MJX-TEX-N-32"></use><use xlink:href="#MJX-TEX-N-30" transform="translate(500, 0)"></use><use xlink:href="#MJX-TEX-N-32" transform="translate(1000, 0)"></use><use xlink:href="#MJX-TEX-N-31" transform="translate(1500, 0)"></use></g></g></g></svg><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>2021</mn></math></mjx-assistive-mml></mjx-container></span></p>
+<li><p>Presented at <a href="https://juliacon.org">JuliaCon</a> <span class="tex"><mjx-container class="MathJax CtxtMenu_Attached_0" jax="SVG" role="presentation" tabindex="0" ctxtmenu_counter="2" style="position: relative;"><svg xmlns="http://www.w3.org/2000/svg" width="4.525ex" height="1.557ex" role="img" focusable="false" viewBox="0 -666 2000 688" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" style="vertical-align: -0.05ex;"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="matrix(1 0 0 -1 0 0)"><g data-mml-node="math"><g data-mml-node="mn"><use xlink:href="#MJX-TEX-N-32"></use><use xlink:href="#MJX-TEX-N-30" transform="translate(500, 0)"></use><use xlink:href="#MJX-TEX-N-32" transform="translate(1000, 0)"></use><use xlink:href="#MJX-TEX-N-31" transform="translate(1500, 0)"></use></g></g></g></svg><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>2021</mn></math></mjx-assistive-mml></mjx-container></span>, available at <a href="https://jcarpinelli.dev/juliacon">jcarpinelli.dev/juliacon</a></p>
 </li>
 </ul>
 </div>
@@ -56,7 +56,7 @@ html"""
 
 # ╔═╡ be3e37aa-df5e-46bb-a50d-024622c5c3dc
 md"""
-## How can we navigate to Jupiter?
+## Directions to Jupiter
 _Where do we even start?_
 
 - Astrodynamics coursework, research, and online resources
@@ -66,7 +66,7 @@ _Where do we even start?_
 # ╔═╡ 04094a20-bcee-4607-93bd-e2f525c5f964
 
 html"""
-<div style="margin-left: 2%;">
+<div style="margin-left: 2;">
 <iframe height="450" src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d6873922.479841344!2d-84.00653271879332!3d32.728369627891425!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e6!4m5!1s0x89b7c6de5af6e45b%3A0xc2524522d4885d2a!2sWashington%20D.C.%2C%20DC!3m2!1d38.9071923!2d-77.0368707!4m5!1s0x88d93335441a6f7d%3A0xdc51486fff899a21!2sJupiter%2C%20FL!3m2!1d26.9342246!2d-80.0942087!5e0!3m2!1sen!2sus!4v1625589679029!5m2!1sen!2sus" height="300" width = "600" style="border:0; position: relative;" allowfullscreen="" loading="lazy"></iframe>
 </div>
 """
@@ -125,46 +125,6 @@ Image credit to <a href=https://twitter.com/code_typed/status/139145492444204646
 </div>
 """
 
-# ╔═╡ 525e8d49-7559-4e5f-8a63-01d29266a3fd
-md"""
-## Unicode, Units, and Speed – Oh My!
-_Right off the bat, Julia helps a lot._
-
-
-### Unicode Characters Help with Equations
-
-* Equations are mathematically expressive!
-
-```julia
-ṙ = -μ * (r / norm(r))
-```
-
-### Unit Handling with `Unitful.jl`
-
-* `Unitful.jl` and extensions (`UnitfulAstro.jl`, `UnitfulAngles.jl`) are the best unit handling packages I've seen yet
-
-```julia
-using LinearAlgebra, Unitful
-r = [0.0, 11_500, 0.0]u"km"
-norm(r) == 11_500_000u"m"
-```
-
-### Multiple Dispatch and Speed
-
-* Type stable code is really fast!
-* Julia's type system allows for writing equations based on `Orbit` types
-
-```julia
-period(a, μ) = 2π * √(a^3 / μ)
-period(orbit::Orbit) = period(semimajor_axis(orbit), mass_parameter(orbit.system))
-period(orbit::Orbit{Parabolic} = Inf * timeunit(orbit.state)
-period(orbit::Orbit{Hyperbolic} = NaN * timeunit(orbit.state)
-```
-
-
-
-"""
-
 # ╔═╡ 467c6cfc-9e8f-481d-920f-058a72634f92
 md"""
 
@@ -188,15 +148,6 @@ Write these dynamics into a function, and plug that function into a numerical in
 	If your self-coded function allocates memory, your numerical integration __will__ be sub-optimal. Use `ModelingToolkit.jl` and `AstrodynamicalModels.jl` to generate fast functions for you!
 
 
-"""
-
-# ╔═╡ 1e767321-8109-4a66-ae8d-63be42698d61
-md"""
-## Orbit Propagation
-_Practically out-of-the-box!_
-
-* `GeneralAstrodynamics.jl` uses `AstrodynamicalModels.jl` to wrap the numerical integrators in `DifferentialEquations.jl` for easy-to-type orbit propagation
-* That sounds like a mouthful, but look how simple it is!
 """
 
 # ╔═╡ 4531bfd2-9ed6-49a0-8d6b-1df146e72151
@@ -282,48 +233,6 @@ Image credit to <a href="https://www.nasa.gov/mission_pages/genesis/media/jpl-re
 
 """
 
-# ╔═╡ e3ee34cc-b4f4-4a4a-9f67-e3e4da7320e4
-md"""
-## Lagrange Points
-_The equilibrium points of CR3BP dynamics._
-
-* Like any equilibrium points, they can be __stable__ or __unstable__, and they can have __periodic orbits__
-
-"""
-
-# ╔═╡ 008d20d8-1ae7-41c0-8e32-25f6b44c200e
-md"""
-
-__System:__ $(@bind lagrange_plot_sys PlutoUI.Select([
-	"Earth-Moon" => "Earth-Moon",
-	"Sun-Earth" => "Sun-Earth",
-	"Sun-Mars" => "Sun-Mars",
-	"Sun-Jupiter" => "Sun-Jupiter"
-])) 
-
-"""
-
-# ╔═╡ a3a1e01d-f524-43e1-9ca8-24f38ec4d8ec
-let 
-	
-	if lagrange_plot_sys == "Earth-Moon"
-		sys = EarthMoon
-	elseif lagrange_plot_sys == "Sun-Earth"
-		sys = SunEarth
-	elseif lagrange_plot_sys == "Sun-Mars"
-		sys = SunMars
-	else
-		sys = SunJupiter
-	end
-	
-	# Plot lagrange points
-	figure = lagrangeplot(sys)
-	
-	# Plot centers of mass
-	plotbodies!(figure, sys; legend = :topright)
-	
-end
-
 # ╔═╡ 81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
 md"""
 ## Periodic Orbits about Lagrange Points
@@ -374,7 +283,7 @@ let
 	
 	plotpositions!(fig, traj; label = "Numerical Solution", dpi=90)
 		
-	scatter!(fig, map(el->[el], lagrange(EarthMoon)[1])...; markershape=:x, label="L$L")
+	scatter!(fig, map(el->[el], lagrange(EarthMoon)[L])...; markershape=:x, label="L$L")
 	
 	fig
 end
@@ -409,12 +318,12 @@ __Mission Phase:__ $(@bind mission_phase PlutoUI.Select([
 
 """
 
-# ╔═╡ f6748587-f37b-4510-b7d7-d3a650acc36f
-let
+# ╔═╡ be12f2e6-d645-4996-9c69-a756d359dbaa
+begin
+	
+	phase_one_plot = let
 
-	if mission_phase == "Phase One"
-		
-		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
+	orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
 		@time manifold = stable_manifold(orbit, T; num_trajectories = 50, duration=T, eps=-1e-7)
 		
 		LU  = (string ∘ normalized_length_unit)(orbit.system)
@@ -443,11 +352,13 @@ let
 		
 		fig
 		
-	elseif mission_phase == "Phase Two"
-		
+	end
+
+	phase_two_plot = let
+	
 		orbit, T = halo(SunEarth; Az=100_000u"km", L=2)
 		manifold = unstable_manifold(orbit, T; 
-									 num_trajectories=100, 
+									 num_trajectories=50, 
 									 duration=3T, eps=1e-6, saveat=1e-2);	
 		
 		LU  = (string ∘ normalized_length_unit)(orbit.system)
@@ -470,11 +381,13 @@ let
 		
 		fig
 		
-	elseif mission_phase == "Phase Three"
+	end
+	
+	phase_three_plot = let
 		
 		orbit, T = halo(SunJupiter; Az=300_000u"km", L=1)
 		manifold = stable_manifold(orbit, T; num_trajectories = 50,
-								   duration=2.7T, eps=1e-8, saveat=1e-2);	
+								   duration=2.5T, eps=1e-8, saveat=1e-2);	
 		
 		LU  = (string ∘ normalized_length_unit)(orbit.system)
 		fig = plot(; title = "Phase #3: Transfer Orbit to Sun-Jupiter Halo",
@@ -501,6 +414,25 @@ let
 		
 	end
 	
+end;
+
+# ╔═╡ f6748587-f37b-4510-b7d7-d3a650acc36f
+let
+
+	if mission_phase == "Phase One"
+		
+		phase_one_plot
+		
+	elseif mission_phase == "Phase Two"
+		
+		phase_two_plot
+		
+	elseif mission_phase == "Phase Three"
+		
+		phase_three_plot
+		
+	end
+	
 	
 end
 
@@ -515,14 +447,14 @@ _Julia and its package ecosystem let me be a (productive) lazy astrodynamics dev
 ### Ecosystem Packages
 * `Unitful.jl` and associated extensions are fantastic unit-handling packages
 * `DifferentialEquations.jl`, `ModelingToolkit.jl`, and model packages like `AstrodynamicalModels.jl` let you type dynamics for __correctness__, not __computational efficiency__
-* `Plots.jl` is very simple to use
+* `Plots.jl` is very simple and intuitive to use
 
 ### Interested in Astrodynamics? Help out!
 * I've had a lot of fun developing `GeneralAstrodynamics.jl`, and there's more work to do! 
 * Don't be shy about filing issues, making pull requests, and otherwise contacting me if you're interested in helping out with features. No astrodynamics experience is required!
 
 !!! note "Psst!"
-	Hey everyone, switch your Twitter handles to your favorite Julia macros!
+	Hey everyone, switch your Twitter handles to your favorite Julia macros! I've claimed `@code_typed`.
 
 
 """
@@ -535,7 +467,7 @@ _Thanks, all!_
 * The Julia Programming Language, `Unitful.jl`, `UnitfulAstro.jl`, `DifferentialEquations.jl`, and `ModelingToolkit.jl` are __excellent__ tools for scientific computing
 
 
-* `Pluto.jl` and `PlutoUI.jl` are excellent packages for showing demos and concepts, and for JuliaCon presentations 😁
+* `Pluto.jl` is excellent for showing demos, concepts, and JuliaCon presentations 😁
 
 
 * Thanks to Dr. Barbee for continued guidance relating to finding periodic orbits, and designing manifold-based interplanetary transfers
@@ -544,8 +476,8 @@ _Thanks, all!_
 * Thanks to Dr. Mireles for providing well-explained and publicly available notes and periodic orbit-finding MATLAB code on his [website](http://cosweb1.fau.edu/~jmirelesjames/notes.html)
 
 
-!!! tip "Finally..."
-	__Thank you to all of you for watching!__
+!!! tip "Finally, thank you for watching!"
+	Slides are available at [jcarpinelli.dev/juliacon](jcarpinelli.dev/juliacon). Please don't hesitate to reach out with questions!
 
 """
 
@@ -587,50 +519,60 @@ macro terminal(expr)
 end;
 
 # ╔═╡ 572913c1-d221-4e03-99cc-e9f0086879d3
-@terminal print(@doc AstrodynamicalModels.R2BP)
+@terminal print(@doc R2BP)
 
-# ╔═╡ 027baa6a-9261-416b-9189-b92aa18cf979
-let r = randn(3) .* 10_000, v = randn(3)
-
-	orbit      = Orbit(r, v, Earth) 
-	duration   = conic(orbit) ∈ (Circular, Elliptical) ? period(orbit) : 10_000u"s"
-	
-	trajectory = propagate(orbit, duration)
-
-	@terminal let
-		@show orbit
-		@show trajectory
-		@show trajectory[1] ≈ trajectory[end]
-	end
-end
-
-# ╔═╡ b8deb78a-378f-4c94-b6e3-7a4b69faeabe
+# ╔═╡ 525e8d49-7559-4e5f-8a63-01d29266a3fd
 md"""
-## Keplerian Elements
+## Unicode, Units, Multiple Dispatch
+_Oh my!_
 
-|Orbital Elements (Keplerian) | Input |
-| -------------- | ----- |
-| Eccentricity | $(@bind e Slider(0.0:0.01:0.9; default=0, show_value=false)) |
-| Semi-major Axis (km) | $(@bind a Slider(6500.0:100:13000, show_value=false)) |
-| Inclination (°) | $(@bind i Slider(0.0:1:360, show_value=false)) |
-| R.A.A.N. (°) | $(@bind Ω Slider(0.0:1:360, show_value=false)) |
-| Arg. of Periapsis (°) | $(@bind ω Slider(0.0:1:360, show_value=false)) |
-| True Anomoly (°) | $(@bind ν Slider(0.0:1:360, show_value=false)) |
+
+### Unicode Characters Help with Equations
+
+* Equations are mathematically expressive!
+
+```julia
+ṙ = -μ * (r / norm(r))
+```
+
+### Unit Handling with `Unitful.jl`
+
+* `Unitful.jl` and extensions (i.e. `UnitfulAstro.jl`, `UnitfulAngles.jl`) are the best unit handling packages I've seen yet
+
+```julia
+using LinearAlgebra, Unitful
+r = [0.0, 11_500, 0.0]u"km"
+norm(r) == 11_500_000u"m"
+```
+
+### Multiple Dispatch and Speed
+
+* Julia's type system allows for multiple equations for the same "calculation", e.g. orbital period calculations for different conic sections
+
+```julia
+period(a, μ) = 2π * √(a^3 / μ)
+period(orbit::Orbit) = period(semimajor_axis(orbit), mass_parameter(orbit.system))
+period(orbit::Orbit{Parabolic} = Inf * timeunit(orbit.state)
+period(orbit::Orbit{Hyperbolic} = NaN * timeunit(orbit.state)
+```
+
 
 
 """
 
-# ╔═╡ a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
-let ν = 0.0
+# ╔═╡ 784d4c59-5544-4429-b400-7ccb11d4150d
+md"""
+## Orbit Determination
+_Structures and functions for describing orbits!_
+
+### Scratchspace
+"""
+
+# ╔═╡ 35c930fb-6a7c-425b-ad1c-1fe7327fb9c8
+@terminal let system = SunMars
 	
-	# Create an orbit from the parameters above
-	orbit = Orbit(e, a, i, Ω, ω, ν, Earth) |> CartesianOrbit
-	
-	# Propagate for the default duration: one orbital period
-	trajectory = propagate(orbit)
-	
-	# Plot the result!
-	plotpositions(trajectory; aspect_ratio=1.0, dpi=100)
+	orbit = Orbit(randn(3), randn(3), system)
+	print(orbit)
 	
 end
 
@@ -2237,23 +2179,18 @@ version = "0.9.1+5"
 # ╟─707d5dc6-1863-4b02-9910-44c0c01e4d8c
 # ╟─65435b1e-d80f-4015-a547-96ff2a57e3bb
 # ╟─749f7e4e-c1b5-4a2b-9ed3-862dc27a3b44
-# ╟─525e8d49-7559-4e5f-8a63-01d29266a3fd
 # ╟─467c6cfc-9e8f-481d-920f-058a72634f92
 # ╠═572913c1-d221-4e03-99cc-e9f0086879d3
-# ╟─1e767321-8109-4a66-ae8d-63be42698d61
-# ╠═027baa6a-9261-416b-9189-b92aa18cf979
 # ╟─4531bfd2-9ed6-49a0-8d6b-1df146e72151
 # ╟─19af281a-ba06-4184-beee-a70967f00093
 # ╟─628a98a7-a612-4a8c-802c-a8f35483fb8c
 # ╟─dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
-# ╟─e3ee34cc-b4f4-4a4a-9f67-e3e4da7320e4
-# ╟─008d20d8-1ae7-41c0-8e32-25f6b44c200e
-# ╟─a3a1e01d-f524-43e1-9ca8-24f38ec4d8ec
 # ╟─81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
 # ╟─23dd6d62-09ab-436e-8bd1-360d9a0b9997
 # ╟─339e8eff-b020-494f-89a1-bd174d198050
 # ╟─2a1f751a-9602-4caf-b27b-3650beb3bd05
 # ╟─f6748587-f37b-4510-b7d7-d3a650acc36f
+# ╟─be12f2e6-d645-4996-9c69-a756d359dbaa
 # ╟─c54ec985-95dc-49f7-bbb9-23c89208a5a9
 # ╟─0edb894e-1388-438c-bd46-8a7443b3f114
 # ╟─6227f2be-3b59-4681-9af0-8d5bbd0b12d5
@@ -2263,7 +2200,8 @@ version = "0.9.1+5"
 # ╠═5cec4b12-2e54-4eab-9de5-01c55df01a0c
 # ╟─4a3a9e5e-5340-476e-96ce-301ba16a74b6
 # ╠═140901f7-2245-4e25-a490-d6f930620797
-# ╟─b8deb78a-378f-4c94-b6e3-7a4b69faeabe
-# ╠═a4a41ff6-b2bb-4bcc-9a43-361a96b89d48
+# ╟─525e8d49-7559-4e5f-8a63-01d29266a3fd
+# ╟─784d4c59-5544-4429-b400-7ccb11d4150d
+# ╠═35c930fb-6a7c-425b-ad1c-1fe7327fb9c8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
