@@ -233,74 +233,6 @@ Image credit to <a href="https://www.nasa.gov/mission_pages/genesis/media/jpl-re
 
 """
 
-# ╔═╡ 81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
-md"""
-## Periodic Orbits about Lagrange Points
-_Just like any other dynamics!_
-
-__System:__ $(@bind halo_attr_sys PlutoUI.Select([
-	"Earth-Moon" => "Earth-Moon",
-	"Sun-Earth" => "Sun-Earth",
-	"Sun-Mars" => "Sun-Mars",
-	"Sun-Jupiter" => "Sun-Jupiter"
-])) 
-   __Lagrange Point:__ $(@bind halo_attr_lagrange PlutoUI.Select([
-	"1" => "1", 
-	"2" => "2"
-]))
-__Z-axis Amplitude:__ $(@bind halo_attr_amp PlutoUI.NumberField(0.0:0.0001:0.05; default = 0.005))
-"""
-
-# ╔═╡ 23dd6d62-09ab-436e-8bd1-360d9a0b9997
-let 
-	if halo_attr_sys == "Earth-Moon"
-		sys = EarthMoon
-	elseif halo_attr_sys == "Sun-Earth"
-		sys = SunEarth
-	elseif halo_attr_sys == "Sun-Mars"
-		sys = SunMars
-	else
-		sys = SunJupiter
-	end
-	
-	μ  = normalized_mass_parameter(sys)
-	LU = (string ∘ normalized_length_unit)(sys)
-	Az = halo_attr_amp
-	L  = parse(Int, halo_attr_lagrange)
-	
-	rₐ, vₐ, Tₐ = analyticalhalo(μ; Az = Az, L = L, steps = 1000)
-	
-	fig = plotpositions((collect ∘ eachrow)(rₐ); 
-						title  = "Halo Orbit about $(sys.name) L$L",
-						label  = "Analytical Solution",
-						xlabel = "X ($LU)", 
-						ylabel = "Y ($LU)", 
-						zlabel = "Z ($LU)",
-						dpi    = 200)
-
-	options = (; reltol = 1e-14, abstol = 1e-14, saveat=1e-2)
-	traj = propagate(halo(EarthMoon; Az = Az, L = L)...; options...)
-	
-	plotpositions!(fig, traj; label = "Numerical Solution", dpi=90)
-		
-	scatter!(fig, map(el->[el], lagrange(EarthMoon)[L])...; markershape=:x, label="L$L")
-	
-	fig
-end
-
-# ╔═╡ 339e8eff-b020-494f-89a1-bd174d198050
-md"""
-### Halo Solver Usage
-
-```julia
-# Analytical Approximation (not numerically periodic)
-r, v, T  = analyticalhalo(μ; Az = 0.005, L = 1, hemisphere = :northern)
-
-# Numerically Periodic (found with iterative differential correction)
-orbit, T = halo(μ; Az = 0.005, L = 2, hemisphere = :southern) 
-```
-"""
-
 # ╔═╡ 2a1f751a-9602-4caf-b27b-3650beb3bd05
 md"""
 ## Manifold Transfer Concept
@@ -498,12 +430,12 @@ md"""
 
 # ╔═╡ 916a959e-062e-410a-896d-9913f2cb0650
 md"""
-### Extra Packages
+#### Extra Packages
 """
 
 # ╔═╡ 4a3a9e5e-5340-476e-96ce-301ba16a74b6
 md"""
-### Macros
+#### Macros
 """
 
 # ╔═╡ 140901f7-2245-4e25-a490-d6f930620797
@@ -576,6 +508,74 @@ _Structures and functions for describing orbits!_
 	
 end
 
+# ╔═╡ 81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
+md"""
+## Periodic Orbits about Lagrange Points
+_Just like any other dynamics!_
+
+__System:__ $(@bind halo_attr_sys PlutoUI.Select([
+	"Earth-Moon" => "Earth-Moon",
+	"Sun-Earth" => "Sun-Earth",
+	"Sun-Mars" => "Sun-Mars",
+	"Sun-Jupiter" => "Sun-Jupiter"
+])) 
+   __Lagrange Point:__ $(@bind halo_attr_lagrange PlutoUI.Select([
+	"1" => "1", 
+	"2" => "2"
+]))
+__Z-axis Amplitude:__ $(@bind halo_attr_amp PlutoUI.NumberField(0.0:0.0001:0.05; default = 0.005))
+"""
+
+# ╔═╡ 23dd6d62-09ab-436e-8bd1-360d9a0b9997
+let 
+	if halo_attr_sys == "Earth-Moon"
+		sys = EarthMoon
+	elseif halo_attr_sys == "Sun-Earth"
+		sys = SunEarth
+	elseif halo_attr_sys == "Sun-Mars"
+		sys = SunMars
+	else
+		sys = SunJupiter
+	end
+	
+	μ  = normalized_mass_parameter(sys)
+	LU = (string ∘ normalized_length_unit)(sys)
+	Az = halo_attr_amp
+	L  = parse(Int, halo_attr_lagrange)
+	
+	rₐ, vₐ, Tₐ = analyticalhalo(μ; Az = Az, L = L, steps = 1000)
+	
+	fig = plotpositions((collect ∘ eachrow)(rₐ); 
+						title  = "Halo Orbit about $(sys.name) L$L",
+						label  = "Analytical Solution",
+						xlabel = "X ($LU)", 
+						ylabel = "Y ($LU)", 
+						zlabel = "Z ($LU)",
+						dpi    = 200)
+
+	options = (; reltol = 1e-14, abstol = 1e-14, saveat=1e-2)
+	traj = propagate(halo(EarthMoon; Az = Az, L = L)...; options...)
+	
+	plotpositions!(fig, traj; label = "Numerical Solution", dpi=90)
+		
+	scatter!(fig, map(el->[el], lagrange(EarthMoon)[L])...; markershape=:x, label="L$L")
+	
+	fig
+end
+
+# ╔═╡ 339e8eff-b020-494f-89a1-bd174d198050
+md"""
+### Halo Solver Usage
+
+```julia
+# Analytical Approximation (not numerically periodic)
+r, v, T  = analyticalhalo(μ; Az = 0.005, L = 1, hemisphere = :northern)
+
+# Numerically Periodic (found with iterative differential correction)
+orbit, T = halo(μ; Az = 0.005, L = 2, hemisphere = :southern) 
+```
+"""
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -600,7 +600,7 @@ Latexify = "~0.15.6"
 Plots = "~1.18.1"
 PlutoUI = "~0.7.9"
 Rotations = "~1.0.2"
-StaticArrays = "~1.2.5"
+StaticArrays = "~1.2.6"
 Symbolics = "~1.2.2"
 Unitful = "~1.8.0"
 UnitfulAstro = "~1.0.1"
@@ -715,9 +715,9 @@ version = "0.10.11"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random", "StaticArrays"]
-git-tree-sha1 = "c8fd01e4b736013bc61b704871d20503b33ea402"
+git-tree-sha1 = "ed268efe58512df8c7e224d2e170afd76dd6a417"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.12.1"
+version = "3.13.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -846,10 +846,10 @@ uuid = "5a0ffddc-d203-54b0-88ba-2c03c0fc2e67"
 version = "2.4.0"
 
 [[DiffEqJump]]
-deps = ["ArrayInterface", "Compat", "DataStructures", "DiffEqBase", "FunctionWrappers", "LinearAlgebra", "PoissonRandom", "Random", "RandomNumbers", "RecursiveArrayTools", "StaticArrays", "TreeViews", "UnPack"]
-git-tree-sha1 = "210ae4148a9b687680c74d13f415cc190fb2c101"
+deps = ["ArrayInterface", "Compat", "DataStructures", "DiffEqBase", "FunctionWrappers", "LightGraphs", "LinearAlgebra", "PoissonRandom", "Random", "RandomNumbers", "RecursiveArrayTools", "Reexport", "StaticArrays", "TreeViews", "UnPack"]
+git-tree-sha1 = "d2d9a628b9659a3107c95b0a61ca93865794245a"
 uuid = "c894b116-72e5-5b58-be3c-e6d8d4ac2b12"
-version = "6.14.2"
+version = "6.15.1"
 
 [[DiffEqNoiseProcess]]
 deps = ["DiffEqBase", "Distributions", "LinearAlgebra", "Optim", "PoissonRandom", "QuadGK", "Random", "Random123", "RandomNumbers", "RecipesBase", "RecursiveArrayTools", "Requires", "ResettableStacks", "SciMLBase", "StaticArrays", "Statistics"]
@@ -899,9 +899,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Distributions]]
 deps = ["FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "9f35e8c1b24d8d7337835942fb23210931d16f12"
+git-tree-sha1 = "d5fa76fdab7bf54615262bd639e8c2e9bf295444"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.9"
+version = "0.25.10"
 
 [[DocStringExtensions]]
 deps = ["LibGit2"]
@@ -921,9 +921,9 @@ uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [[DynamicPolynomials]]
 deps = ["DataStructures", "Future", "LinearAlgebra", "MultivariatePolynomials", "MutableArithmetics", "Pkg", "Reexport", "Test"]
-git-tree-sha1 = "b17c665e4994b1e0f30148ffdd16188cae4e9d1b"
+git-tree-sha1 = "5e47c4d652ea67652b7c5945c79c46472397d47f"
 uuid = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
-version = "0.3.17"
+version = "0.3.18"
 
 [[EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1306,15 +1306,20 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[LoopVectorization]]
 deps = ["ArrayInterface", "DocStringExtensions", "IfElse", "LinearAlgebra", "OffsetArrays", "Polyester", "Requires", "SLEEFPirates", "Static", "StrideArraysCore", "ThreadingUtilities", "UnPack", "VectorizationBase"]
-git-tree-sha1 = "20316f08f70fae085ed90c7169ae318c036ee83b"
+git-tree-sha1 = "652a17092a160bb9677eefb18db31d717e7a4078"
 uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
-version = "0.12.49"
+version = "0.12.50"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "6a8a2a625ab0dea913aba95c11370589e0239ff0"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.6"
+
+[[ManualMemory]]
+git-tree-sha1 = "80ccdd8143934c40a170ef3178af64b7905230bd"
+uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
+version = "0.1.3"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -1351,10 +1356,10 @@ version = "1.0.0"
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[ModelingToolkit]]
-deps = ["AbstractTrees", "ArrayInterface", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqJump", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "JuliaFormatter", "LabelledArrays", "Latexify", "Libdl", "LightGraphs", "LinearAlgebra", "MacroTools", "NaNMath", "NonlinearSolve", "RecursiveArrayTools", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SafeTestsets", "SciMLBase", "Serialization", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "Symbolics", "UnPack", "Unitful"]
-git-tree-sha1 = "7344cc0ba1e2c4933f9b2545b8860483a9acf0d4"
+deps = ["AbstractTrees", "ArrayInterface", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqJump", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "InteractiveUtils", "JuliaFormatter", "LabelledArrays", "Latexify", "Libdl", "LightGraphs", "LinearAlgebra", "MacroTools", "NaNMath", "NonlinearSolve", "RecursiveArrayTools", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SafeTestsets", "SciMLBase", "Serialization", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "Symbolics", "UnPack", "Unitful"]
+git-tree-sha1 = "9cc6e4543374e89b4a33c4b787b3ab6298a4cf78"
 uuid = "961ee093-0014-501f-94e3-6117800e7a78"
-version = "5.21.0"
+version = "5.22.0"
 
 [[MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
@@ -1372,9 +1377,9 @@ version = "1.8.1"
 
 [[MultivariatePolynomials]]
 deps = ["DataStructures", "LinearAlgebra", "MutableArithmetics"]
-git-tree-sha1 = "db4718c1b40e0b0ff739159c7230d5266bbfc7db"
+git-tree-sha1 = "45c9940cec79dedcdccc73cc6dd09ea8b8ab142c"
 uuid = "102ac46a-7ee4-5c85-9060-abc95bfdeaa3"
-version = "0.3.17"
+version = "0.3.18"
 
 [[MutableArithmetics]]
 deps = ["LinearAlgebra", "SparseArrays", "Test"]
@@ -1455,9 +1460,9 @@ version = "1.4.1"
 
 [[OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "Logging", "MacroTools", "MuladdMacro", "NLsolve", "Polyester", "RecursiveArrayTools", "Reexport", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "2bf931b4ac5ec252bbf2ae389a84d4f0e3987c36"
+git-tree-sha1 = "c976f6257f59db6ab0ae458fa168aa24ed543652"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.59.4"
+version = "5.60.0"
 
 [[PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1519,9 +1524,9 @@ version = "1.0.11"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "b93181645c1209d912d5632ba2d0094bc00703ad"
+git-tree-sha1 = "f32cd6fcd2909c2d1cdd47ce55e1394b04a66fe2"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.18.1"
+version = "1.18.2"
 
 [[PlutoUI]]
 deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
@@ -1536,10 +1541,10 @@ uuid = "e409e4f3-bfea-5376-8464-e040bb5c01ab"
 version = "0.4.0"
 
 [[Polyester]]
-deps = ["ArrayInterface", "IfElse", "Requires", "Static", "StrideArraysCore", "ThreadingUtilities", "VectorizationBase"]
-git-tree-sha1 = "0ad72bf3e19ceb7a3150b2fb35e746aa8c6e1c85"
+deps = ["ArrayInterface", "IfElse", "ManualMemory", "Requires", "Static", "StrideArraysCore", "ThreadingUtilities", "VectorizationBase"]
+git-tree-sha1 = "f5a74523ebc205723baefb95874f708741199d70"
 uuid = "f517fe37-dbe3-4b94-8317-1923a5111588"
-version = "0.3.2"
+version = "0.3.4"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1619,9 +1624,9 @@ version = "0.3.4"
 
 [[RecursiveArrayTools]]
 deps = ["ArrayInterface", "ChainRulesCore", "DocStringExtensions", "LinearAlgebra", "RecipesBase", "Requires", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "e205e8c50633f96dbc59d4ae760f4e9e4d445fdb"
+git-tree-sha1 = "8755b407ac7de9256b21b5da1c7304aa3e398847"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "2.14.5"
+version = "2.14.8"
 
 [[RecursiveFactorization]]
 deps = ["LinearAlgebra", "LoopVectorization"]
@@ -1693,9 +1698,9 @@ version = "0.0.1"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "50294d98330855582e52f19e21196fc5b6099415"
+git-tree-sha1 = "932aaae93e81686e6473f27b5a11c403576a2183"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.17.1"
+version = "1.18.0"
 
 [[Scratch]]
 deps = ["Dates"]
@@ -1730,9 +1735,9 @@ version = "1.0.3"
 
 [[SimpleTraits]]
 deps = ["InteractiveUtils", "MacroTools"]
-git-tree-sha1 = "daf7aec3fe3acb2131388f93a4c409b8c7f62226"
+git-tree-sha1 = "5d7e3f4e11935503d3ecaf7186eac40602e7d231"
 uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
-version = "0.9.3"
+version = "0.9.4"
 
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
@@ -1748,10 +1753,10 @@ deps = ["LinearAlgebra", "Random"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SparseDiffTools]]
-deps = ["Adapt", "ArrayInterface", "Compat", "DataStructures", "FiniteDiff", "ForwardDiff", "LightGraphs", "LinearAlgebra", "Requires", "SparseArrays", "VertexSafeGraphs"]
-git-tree-sha1 = "be20320958ccd298c98312137a5ebe75a654ebc8"
+deps = ["Adapt", "ArrayInterface", "Compat", "DataStructures", "FiniteDiff", "ForwardDiff", "LightGraphs", "LinearAlgebra", "Requires", "SparseArrays", "StaticArrays", "VertexSafeGraphs"]
+git-tree-sha1 = "0b80aeffdc8a7bae5b6f7a9d43c600215775788b"
 uuid = "47a9eef4-7e08-11e9-0b38-333d64bd3804"
-version = "1.13.2"
+version = "1.14.0"
 
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
@@ -1767,9 +1772,9 @@ version = "0.2.5"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "896d55218776ab8f23fb7b222a5a4a946d4aafc2"
+git-tree-sha1 = "a43a7b58a6e7dc933b2fa2e0ca653ccf8bb8fd0e"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.2.5"
+version = "1.2.6"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1805,10 +1810,10 @@ uuid = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 version = "6.35.0"
 
 [[StrideArraysCore]]
-deps = ["ArrayInterface", "Requires", "ThreadingUtilities", "VectorizationBase"]
-git-tree-sha1 = "efcdfcbb8cf91e859f61011de1621be34b550e69"
+deps = ["ArrayInterface", "ManualMemory", "Requires", "ThreadingUtilities", "VectorizationBase"]
+git-tree-sha1 = "f25b9b62645d97ca5770015ad5d144c3e220fb47"
 uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
-version = "0.1.13"
+version = "0.1.15"
 
 [[StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]
@@ -1843,15 +1848,15 @@ version = "0.2.0"
 
 [[SymbolicUtils]]
 deps = ["AbstractTrees", "ChainRulesCore", "Combinatorics", "ConstructionBase", "DataStructures", "DynamicPolynomials", "IfElse", "LabelledArrays", "LinearAlgebra", "MultivariatePolynomials", "NaNMath", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "TimerOutputs"]
-git-tree-sha1 = "91659406d1c4a06bcbf074a11727dff49c35240c"
+git-tree-sha1 = "17fecd52e9a82ca52bfc9d28a2d31b33458a6ce0"
 uuid = "d1185830-fcd6-423d-90d6-eec64667417b"
-version = "0.13.0"
+version = "0.13.1"
 
 [[Symbolics]]
 deps = ["ConstructionBase", "DiffRules", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "Latexify", "Libdl", "LinearAlgebra", "MacroTools", "NaNMath", "RecipesBase", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "TreeViews"]
-git-tree-sha1 = "713685972c3991b23a430fea59e32136140f2528"
+git-tree-sha1 = "a1eb487f1c042bdc1087053f7a7a40fbb2b998a7"
 uuid = "0c5d862f-8b57-4792-8d23-62f2024744c7"
-version = "1.2.2"
+version = "1.2.3"
 
 [[TOML]]
 deps = ["Dates"]
@@ -1878,10 +1883,10 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[ThreadingUtilities]]
-deps = ["VectorizationBase"]
-git-tree-sha1 = "28f4295cd761ce98db2b5f8c1fe6e5c89561efbe"
+deps = ["ManualMemory"]
+git-tree-sha1 = "593009385e6536dc50baedc2c8bc1a3717ef358f"
 uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
-version = "0.4.4"
+version = "0.4.5"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
@@ -2185,9 +2190,6 @@ version = "0.9.1+5"
 # ╟─19af281a-ba06-4184-beee-a70967f00093
 # ╟─628a98a7-a612-4a8c-802c-a8f35483fb8c
 # ╟─dc4acf0a-4d77-4bd7-8dec-4cceaa2953ae
-# ╟─81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
-# ╟─23dd6d62-09ab-436e-8bd1-360d9a0b9997
-# ╟─339e8eff-b020-494f-89a1-bd174d198050
 # ╟─2a1f751a-9602-4caf-b27b-3650beb3bd05
 # ╟─f6748587-f37b-4510-b7d7-d3a650acc36f
 # ╟─be12f2e6-d645-4996-9c69-a756d359dbaa
@@ -2203,5 +2205,8 @@ version = "0.9.1+5"
 # ╟─525e8d49-7559-4e5f-8a63-01d29266a3fd
 # ╟─784d4c59-5544-4429-b400-7ccb11d4150d
 # ╠═35c930fb-6a7c-425b-ad1c-1fe7327fb9c8
+# ╟─81fc1ec6-9578-43d8-9d78-aa68b2cadc1a
+# ╟─23dd6d62-09ab-436e-8bd1-360d9a0b9997
+# ╟─339e8eff-b020-494f-89a1-bd174d198050
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
