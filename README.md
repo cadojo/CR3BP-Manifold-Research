@@ -14,7 +14,7 @@ In short, this repository contains:
 
 ## Open Source Licenses
 
-All works in this repository are licensed under the Unlicense Open Source license (that is, they are free and available within public domain) with __one__ exception: all papers under the `papers` directory are licensed with the permissive MIT license. 
+All works in this repository are licensed under the Unlicense Open Source license (that is, they are free and available within public domain) with __one__ exception: all papers and notebooks under the `papers` and `notebooks` directories are licensed with the permissive MIT license. 
 
 ## Background
 Halo orbits are theoretically perfectly periodic orbits about equilibrium positions (a.k.a. 
