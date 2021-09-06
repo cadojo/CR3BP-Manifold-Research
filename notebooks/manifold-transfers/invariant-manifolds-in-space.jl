@@ -7,17 +7,21 @@ using InteractiveUtils
 # ╔═╡ f4e67586-4fdd-4fa3-9b55-5174345cb5eb
 begin
 	
+	using LazySets
 	using Rotations
 	using StaticArrays
 	using LinearAlgebra
-	using ModelingToolkit
+	using ReachabilityAnalysis
 	using GeneralAstrodynamics
 	using AstrodynamicalModels
 	using DifferentialEquations
 	using Unitful, UnitfulAstro
 	using Plots, PlutoUI, Latexify
 	
-end
+	# We want the `system` function from GeneralAstrodynamics
+	system = GeneralAstrodynamics.system
+	
+end;
 
 # ╔═╡ 243ac0ae-0e77-11ec-3472-a75caee1ed6d
 md"""
@@ -46,7 +50,7 @@ md"""
 ## Introduction
 _An informal introduction to this document._
 
-Now that the formal abstract is out of the way... let's state the goals of this document with fewer words. In all technical fields, we (humans) make simplifying assumptions to _approximately_ describe reality with models. Reality is far too complex to _perfectly_ describe the motion of a body in our solar system! For this reason, astrodynamicists have developed several sets of equations of motion, each with their own simplifying assumptions, benefits, and detriments. Each set of equations of motion may be called a __model__.
+Now that the formal abstract is out of the way, let's introduce manifold-based transfer designs with less jargon. In all technical fields, we (humans) make simplifying assumptions to _approximately_ describe reality with models. Reality is far too complex to _perfectly_ describe the motion of a body in our solar system! For this reason, astrodynamicists have developed several sets of equations of motion, each with their own simplifying assumptions, benefits, and detriments. Each set of equations of motion may be called a __model__.
 
 !!! tip "Definition"
 	__Model__ – a set of equations of motion which approximately decribe reality, with some defined simplifying assumptions.
@@ -125,13 +129,11 @@ let sys = EarthMoon, Az = 0.04, L = 1
 
 	# Construct an `Orbit` with the initial state
 	orbit = let 
-		LU = lengthunit(sys)
-		TU = timeunit(sys)
-		AU = angularunit(sys)
-		
 		state = CartesianState(
 			r[1,:], v[1,:]; 
-			lengthunit=LU, timeunit=TU, angularunit=AU
+			lengthunit  = lengthunit(sys), 
+			timeunit    = timeunit(sys), 
+			angularunit = angularunit(sys)
 		)
 		
 		Orbit(state, sys)
@@ -324,6 +326,7 @@ This approach may be called a "CR3BP patched-conics" method – we are turning t
 """
 
 # ╔═╡ 60b13469-ef77-4df5-9080-d75d768f1195
+
 let 
 	
 	# Start near Earth
@@ -345,7 +348,7 @@ let
 	M₁ = manifold(
 		O₁, T₁; 
 		direction    = Val{:unstable}, 
-		duration     = 3T₁,
+		duration     = 2T₁,
 		eps          = 1e-7,
 		aspect_ratio = 1
 	)
@@ -355,7 +358,7 @@ let
 	M₂ = manifold(
 		O₂, T₂; 
 		direction    = Val{:stable}, 
-		duration     = 3T₁,
+		duration     = 2T₁,
 		eps          = 1e-7,
 		aspect_ratio = 1
 	)
@@ -369,8 +372,8 @@ let
 		M₂; vars = :XY, palette = :blues, 
 		dpi = 250, title = "Arrive at Jupiter"
 	)
-	
 	plot(P₁, P₂; layout=(2,1))
+	
 end
 
 # ╔═╡ a9776dd4-a461-402f-a6cb-9a92c27122fc
@@ -427,6 +430,114 @@ function CR3BPtoR2BP(orbit::CR3BPOrbit, body_index::Int, body::R2BPParameters;
 	
 end;
 
+# ╔═╡ 4aba4714-4bce-46f9-9e51-81397042c2ec
+md"""
+# 🧪 Experiments
+
+This section is currently incomplete – analysis may be present in a subsection, but the methods may not be explained completely, or at all. This will change in the future!
+"""
+
+# ╔═╡ 467b8efe-6009-4f8e-bcaf-3f795ac98694
+md"""
+## Reachability Analysis
+"""
+
+# ╔═╡ 8101681a-771f-44e7-ae20-4fc77cb92bf5
+md"""
+In order to perform reachability analysis with these dynamics, we'll need to _symbolically_ transform CR3BP dynamics to the Heliocentric Inertial reference frame. 
+"""
+
+# ╔═╡ 721766a4-d140-47f1-9a4e-5890a815c67c
+p = let (orbit, T) = halo(SunEarth; Az = 25_000u"km", L = 2)
+	
+	# The direction of the unstable manifold in state space
+	direction  = unstable_eigenvector(monodromy(orbit, T))
+
+	# We'll need the local linearization to find the manifold
+	orbit = let
+		state_with_stm = CartesianStateWithSTM(state(orbit))
+		Orbit(
+			state_with_stm, system(orbit), epoch(orbit); 
+			frame = States.frame(orbit)
+		)
+	end
+	
+	# Let's propagate the orbit for one period
+	trajectory = propagate(orbit, T; abstol=1e-16)
+
+	# We'll need to convexify the initial timesteps of the 
+	# manifold throughout one orbital period
+	convexified_points = let
+		
+		# For every timestep...
+		timestep(i) = solution(trajectory).t[i]
+		
+		# ...find the state vector on the orbit...
+		getstate(i) = state(trajectory, timestep(i))
+		
+		# ...and perturb that state in the direction
+		# of the unstable manifold...
+		perturbation(i) = perturb(getstate(i), direction; eps=1e-8)
+		
+		convexified_points = [
+			ReachabilityAnalysis.Singleton(perturbation(i)[1:2])
+			for i ∈ 1:length(trajectory)
+		]
+		
+	end
+	
+	dom = box_approximation(UnionSetArray(convexified_points))
+	part = split(dom, [2, 2], [4, 4])
+    idx_dom = []
+    for D in part
+        idx = findall(p -> p ⊆ D, convexified_points)
+        isempty(idx) && continue
+        push!(idx_dom, idx)
+    end
+    UnionSetArray([ConvexHullArray(convexified_points[ii]) for ii in idx_dom])
+	
+end
+
+# ╔═╡ fa720640-a9c1-4368-869f-16f8a40d5245
+let
+	
+points = let
+  orbit, T = halo(SunEarth; Az = 0.005, L = 2)
+  trajectory = propagate(orbit, T; abstol=1e-16)
+  Matrix(solution(trajectory)')
+end
+	
+@assert points[1,:] ≈ points[end,:]
+	
+convexified_points = [
+  Singleton(row[1:2]) for row ∈ eachrow(points)
+]
+	
+dom = box_approximation(UnionSetArray(convexified_points))
+part = split(dom, [2, 2], [4, 4])
+idx_dom = []
+for D in part
+  idx = findall(p -> p ⊆ D, convexified_points)
+  isempty(idx) && continue
+  push!(idx_dom, idx)
+end
+
+myset = UnionSetArray([ConvexHullArray(convexified_points[ii]) for ii in idx_dom])
+
+plot(myset)
+		
+end
+
+# ╔═╡ 154d3832-edc1-4b95-b793-3d7e7f3abcc4
+md"""
+## K-Nearest Neighbors
+"""
+
+# ╔═╡ 9af50a35-279e-41ac-91bd-05e25243fb9a
+md"""
+## Convexification
+"""
+
 # ╔═╡ b7fb6868-0f5d-46b7-8987-c5e98a44b282
 md"""
 # 📚 Support
@@ -444,10 +555,11 @@ AstrodynamicalModels = "4282b555-f590-4262-b575-3e516e1493a7"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 GeneralAstrodynamics = "8068df5b-8501-4530-bd82-d24d3c9619db"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+LazySets = "b4f0291d-fe17-52bc-9479-3d1a343d9043"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+ReachabilityAnalysis = "1e97bd63-91d1-579d-8e8d-501d2b57c93f"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
@@ -458,9 +570,10 @@ AstrodynamicalModels = "~0.3.1"
 DifferentialEquations = "~6.19.0"
 GeneralAstrodynamics = "~0.10.1"
 Latexify = "~0.15.6"
-ModelingToolkit = "~5.20.0"
+LazySets = "~1.49.1"
 Plots = "~1.21.3"
 PlutoUI = "~0.7.9"
+ReachabilityAnalysis = "~0.15.1"
 Rotations = "~1.0.2"
 StaticArrays = "~1.2.12"
 Unitful = "~1.9.0"
@@ -533,6 +646,18 @@ version = "0.16.10"
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Statistics", "UUIDs"]
+git-tree-sha1 = "42ac5e523869a84eac9669eaceed9e4aa0e1587b"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.1.4"
+
+[[BinaryProvider]]
+deps = ["Libdl", "Logging", "SHA"]
+git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
+uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+version = "0.5.10"
+
 [[BoundaryValueDiffEq]]
 deps = ["BandedMatrices", "DiffEqBase", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "NLsolve", "Reexport", "SparseArrays"]
 git-tree-sha1 = "fe34902ac0c3a35d016617ab7032742865756d7d"
@@ -556,6 +681,12 @@ git-tree-sha1 = "ed720e2622820bf584d4ad90e6fcb93d95170b44"
 uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 version = "0.1.3"
 
+[[CRlibm]]
+deps = ["Libdl"]
+git-tree-sha1 = "9d1c22cff9c04207f336b8e64840d0bd40d86e0e"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "0.8.0"
+
 [[CSTParser]]
 deps = ["Tokenize"]
 git-tree-sha1 = "60e9121d9ea044c30a04397e59b00c5d9eb826ee"
@@ -568,6 +699,12 @@ git-tree-sha1 = "f2202b55d816427cd385a9a4f3ffb226bee80f99"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+0"
 
+[[Calculus]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
+uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
+version = "0.5.1"
+
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "30ee06de5ff870b45c78f529a6b093b3323256a3"
@@ -579,6 +716,18 @@ deps = ["ArrayInterface", "Static"]
 git-tree-sha1 = "ce9c0d07ed6e1a4fecd2df6ace144cbd29ba6f37"
 uuid = "fb6a15b2-703c-40df-9091-08a04967cfa9"
 version = "0.1.2"
+
+[[CodecBzip2]]
+deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
+git-tree-sha1 = "2e62a725210ce3c3c2e1a3080190e7ca491f18d7"
+uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+version = "0.7.2"
+
+[[CodecZlib]]
+deps = ["TranscodingStreams", "Zlib_jll"]
+git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
+uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
+version = "0.7.0"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
@@ -810,6 +959,17 @@ git-tree-sha1 = "8041575f021cba5a099a456b4163c9a08b566a02"
 uuid = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
 version = "1.1.0"
 
+[[ErrorfreeArithmetic]]
+git-tree-sha1 = "d6863c556f1142a061532e79f611aa46be201686"
+uuid = "90fa49ef-747e-5e6f-a989-263ba693cf1a"
+version = "0.5.2"
+
+[[Espresso]]
+deps = ["LinearAlgebra", "Statistics", "Test"]
+git-tree-sha1 = "c3f4470b5b1ae4a60598e8286e901b9604143d05"
+uuid = "6912e4f1-e036-58b0-9138-08d1e6358ea9"
+version = "0.6.1"
+
 [[Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "b3bfd02e98aedfa5cf885665493c5598c350cd2f"
@@ -849,6 +1009,12 @@ version = "0.1.8"
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
 uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
+
+[[FastRounding]]
+deps = ["ErrorfreeArithmetic", "Test"]
+git-tree-sha1 = "224175e213fd4fe112db3eea05d66b308dc2bf6b"
+uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
+version = "0.2.0"
 
 [[FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
@@ -918,6 +1084,28 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pkg", "Xorg_libXcu
 git-tree-sha1 = "dba1e8614e98949abfa60480b13653813d8f0157"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
 version = "3.3.5+0"
+
+[[GLPK]]
+deps = ["BinaryProvider", "GLPK_jll", "Libdl", "MathOptInterface", "SparseArrays"]
+git-tree-sha1 = "86573ecb852e303b209212046af44871f1c0e49c"
+uuid = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
+version = "0.13.0"
+
+[[GLPKMathProgInterface]]
+deps = ["GLPK", "LinearAlgebra", "MathProgBase", "SparseArrays"]
+git-tree-sha1 = "dcca815a687d8f398c8fc701c3796a36ef6b73a5"
+uuid = "3c7084bd-78ad-589a-b5bb-dbd673274bea"
+version = "0.5.0"
+
+[[GLPK_jll]]
+deps = ["GMP_jll", "Libdl", "Pkg"]
+git-tree-sha1 = "ccc855de74292e478d4278e3a6fdd8212f75e81e"
+uuid = "e8aa6df9-e6ca-548a-97ff-1f85fc5b8b98"
+version = "4.64.0+0"
+
+[[GMP_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
@@ -996,6 +1184,12 @@ git-tree-sha1 = "3395d4d4aeb3c9d31f5929d32760d8baeee88aaf"
 uuid = "e33a78d0-f292-5ffc-b300-72abe9b543c8"
 version = "2.5.0+0"
 
+[[HybridSystems]]
+deps = ["FillArrays", "LightGraphs", "LinearAlgebra", "MappedArrays", "MathematicalSystems"]
+git-tree-sha1 = "0ca6b105d3a8cedd5dafa0fc907c66e737748cd0"
+uuid = "2207ec0c-686c-5054-b4d2-543502888820"
+version = "0.3.5"
+
 [[IOCapture]]
 deps = ["Logging"]
 git-tree-sha1 = "377252859f740c217b936cebcd918a44f9b53b59"
@@ -1022,11 +1216,35 @@ version = "0.5.0"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[IntervalArithmetic]]
+deps = ["CRlibm", "FastRounding", "LinearAlgebra", "Markdown", "Random", "RecipesBase", "RoundingEmulator", "SetRounding", "StaticArrays"]
+git-tree-sha1 = "4902a5ff073d6977e33baad4e8d5c9a77e26eabf"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.18.2"
+
+[[IntervalMatrices]]
+deps = ["IntervalArithmetic", "LinearAlgebra", "Random", "Reexport"]
+git-tree-sha1 = "aec6c38b12fda14d43b787ed0c79680bce550679"
+uuid = "5c1f47dc-42dd-5697-8aaa-4d102d140ba9"
+version = "0.6.4"
+
+[[IntervalRootFinding]]
+deps = ["ForwardDiff", "IntervalArithmetic", "LinearAlgebra", "Polynomials", "Reexport", "StaticArrays"]
+git-tree-sha1 = "0fbc79fa32061a9b55c6511e9e9c90f9d895e779"
+uuid = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+version = "0.5.9"
+
 [[IntervalSets]]
 deps = ["Dates", "EllipsisNotation", "Statistics"]
 git-tree-sha1 = "3cc368af3f110a767ac786560045dceddfc16758"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
 version = "0.5.3"
+
+[[Intervals]]
+deps = ["Dates", "Printf", "RecipesBase", "Serialization", "TimeZones"]
+git-tree-sha1 = "323a38ed1952d30586d0fe03412cde9399d3618b"
+uuid = "d8418881-c3e1-53bb-8760-2df7ec849ed5"
+version = "1.5.0"
 
 [[IrrationalConstants]]
 git-tree-sha1 = "f76424439413893a832026ca355fe273e93bce94"
@@ -1067,11 +1285,23 @@ git-tree-sha1 = "8076680b162ada2a031f707ac7b4953e30667a37"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.2"
 
+[[JSONSchema]]
+deps = ["HTTP", "JSON", "URIs"]
+git-tree-sha1 = "2f49f7f86762a0fbbeef84912265a1ae61c4ef80"
+uuid = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
+version = "0.3.4"
+
 [[JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "d735490ac75c5cb9f1b00d8b5509c11984dc6943"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "2.1.0+0"
+
+[[JuMP]]
+deps = ["Calculus", "DataStructures", "ForwardDiff", "JSON", "LinearAlgebra", "MathOptInterface", "MutableArithmetics", "NaNMath", "Printf", "Random", "SparseArrays", "SpecialFunctions", "Statistics"]
+git-tree-sha1 = "4358b7cbf2db36596bdbbe3becc6b9d87e4eb8f5"
+uuid = "4076af6c-e467-56ae-b986-b466b2749572"
+version = "0.21.10"
 
 [[JuliaFormatter]]
 deps = ["CSTParser", "CommonMark", "DataStructures", "Documenter", "Pkg", "Tokenize"]
@@ -1107,6 +1337,16 @@ deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdow
 git-tree-sha1 = "a4b12a1bd2ebade87891ab7e36fdbce582301a92"
 uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 version = "0.15.6"
+
+[[LazyArtifacts]]
+deps = ["Artifacts", "Pkg"]
+uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
+
+[[LazySets]]
+deps = ["Distributed", "ExprTools", "GLPK", "GLPKMathProgInterface", "InteractiveUtils", "IntervalArithmetic", "JuMP", "LinearAlgebra", "MathProgBase", "Random", "RecipesBase", "Reexport", "Requires", "SharedArrays", "SparseArrays"]
+git-tree-sha1 = "8562d0b08bc20d72f16155f2f6acf93a5d187d50"
+uuid = "b4f0291d-fe17-52bc-9479-3d1a343d9043"
+version = "1.49.1"
 
 [[LeapSeconds]]
 deps = ["Dates"]
@@ -1223,9 +1463,33 @@ git-tree-sha1 = "9cb207b18148b2199db259adfa923b45593fe08e"
 uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
 version = "0.1.6"
 
+[[MappedArrays]]
+deps = ["FixedPointNumbers"]
+git-tree-sha1 = "b92bd220c95a8bbe89af28f11201fd080e0e3fe7"
+uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
+version = "0.3.0"
+
 [[Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
+[[MathOptInterface]]
+deps = ["BenchmarkTools", "CodecBzip2", "CodecZlib", "JSON", "JSONSchema", "LinearAlgebra", "MutableArithmetics", "OrderedCollections", "SparseArrays", "Test", "Unicode"]
+git-tree-sha1 = "575644e3c05b258250bb599e57cf73bbf1062901"
+uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+version = "0.9.22"
+
+[[MathProgBase]]
+deps = ["LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "9abbe463a1e9fc507f12a69e7f29346c2cdc472c"
+uuid = "fdba3010-5040-5b88-9595-932c9decdf73"
+version = "0.7.8"
+
+[[MathematicalSystems]]
+deps = ["Espresso", "InteractiveUtils", "LinearAlgebra", "MacroTools", "MultivariatePolynomials", "RecipesBase", "SparseArrays"]
+git-tree-sha1 = "8f22b72a596bf68ab6c75a07dcda41128f9959f5"
+uuid = "d14a8603-c872-5ed3-9ece-53e0e82e39da"
+version = "0.11.9"
 
 [[MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "Random", "Sockets"]
@@ -1251,6 +1515,12 @@ version = "1.0.1"
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
+[[Mocking]]
+deps = ["ExprTools"]
+git-tree-sha1 = "748f6e1e4de814b101911e64cc12d83a6af66782"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.2"
+
 [[ModelingToolkit]]
 deps = ["AbstractTrees", "ArrayInterface", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqJump", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "IfElse", "JuliaFormatter", "LabelledArrays", "Latexify", "Libdl", "LightGraphs", "LinearAlgebra", "MacroTools", "NaNMath", "NonlinearSolve", "RecursiveArrayTools", "Reexport", "Requires", "RuntimeGeneratedFunctions", "SafeTestsets", "SciMLBase", "Serialization", "Setfield", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicUtils", "Symbolics", "UnPack", "Unitful"]
 git-tree-sha1 = "d6dcf82ad02d88ff198c5757a000d18597a529e6"
@@ -1270,6 +1540,18 @@ deps = ["DiffEqBase", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "OrdinaryDif
 git-tree-sha1 = "258f3be6770fe77be8870727ba9803e236c685b8"
 uuid = "f9640e96-87f6-5992-9c3b-0743c6a49ffa"
 version = "1.8.1"
+
+[[MultivariatePolynomials]]
+deps = ["DataStructures", "LinearAlgebra", "MutableArithmetics"]
+git-tree-sha1 = "45c9940cec79dedcdccc73cc6dd09ea8b8ab142c"
+uuid = "102ac46a-7ee4-5c85-9060-abc95bfdeaa3"
+version = "0.3.18"
+
+[[MutableArithmetics]]
+deps = ["LinearAlgebra", "SparseArrays", "Test"]
+git-tree-sha1 = "3927848ccebcc165952dc0d9ac9aa274a87bfe01"
+uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+version = "0.2.20"
 
 [[NLSolversBase]]
 deps = ["DiffResults", "Distributed", "FiniteDiff", "ForwardDiff"]
@@ -1429,6 +1711,12 @@ git-tree-sha1 = "3ced65f2f182e5b5335a573eaa98f883eba3678b"
 uuid = "f517fe37-dbe3-4b94-8317-1923a5111588"
 version = "0.3.9"
 
+[[Polynomials]]
+deps = ["Intervals", "LinearAlgebra", "MutableArithmetics", "RecipesBase"]
+git-tree-sha1 = "0bbfdcd8cda81b8144de4be8a67f5717e959a005"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "2.0.14"
+
 [[PositiveFactorizations]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "17275485f373e6673f7e7f97051f703ed5b15b20"
@@ -1450,6 +1738,12 @@ version = "1.2.2"
 [[Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[ProgressMeter]]
+deps = ["Distributed", "Printf"]
+git-tree-sha1 = "afadeba63d90ff223a6a48d2009434ecee2ec9e8"
+uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
+version = "1.7.1"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
@@ -1488,6 +1782,12 @@ deps = ["Random", "Requires"]
 git-tree-sha1 = "043da614cc7e95c703498a491e2c21f58a2b8111"
 uuid = "e6cf234a-135c-5ec9-84dd-332b85af5143"
 version = "1.5.3"
+
+[[ReachabilityAnalysis]]
+deps = ["CommonSolve", "ExprTools", "HybridSystems", "IntervalArithmetic", "IntervalMatrices", "LazySets", "LinearAlgebra", "MathematicalSystems", "Parameters", "Printf", "ProgressMeter", "RecipesBase", "RecursiveArrayTools", "Reexport", "Requires", "SparseArrays", "StaticArrays", "TaylorIntegration", "TaylorModels", "TaylorSeries", "UnPack"]
+git-tree-sha1 = "9388db4563480123dfc419e4ea1197295033ffdb"
+uuid = "1e97bd63-91d1-579d-8e8d-501d2b57c93f"
+version = "0.15.1"
 
 [[RecipesBase]]
 git-tree-sha1 = "44a75aa7a527910ee3d1751d1f0e4148698add9e"
@@ -1559,6 +1859,11 @@ git-tree-sha1 = "2ed8d8a16d703f900168822d83699b8c3c1a5cd8"
 uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 version = "1.0.2"
 
+[[RoundingEmulator]]
+git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
+uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
+version = "0.2.1"
+
 [[RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
 git-tree-sha1 = "cdc1e4278e91a6ad530770ebb327f9ed83cf10c4"
@@ -1594,6 +1899,11 @@ version = "1.1.0"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[SetRounding]]
+git-tree-sha1 = "d7a25e439d07a17b7cdf97eecee504c50fedf5f6"
+uuid = "3cc68bcd-71a2-5612-b932-767ffbe40ab0"
+version = "0.2.1"
 
 [[Setfield]]
 deps = ["ConstructionBase", "Future", "MacroTools", "Requires"]
@@ -1756,6 +2066,24 @@ version = "1.5.0"
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
+[[TaylorIntegration]]
+deps = ["DiffEqBase", "Espresso", "InteractiveUtils", "LinearAlgebra", "Markdown", "OrdinaryDiffEq", "RecursiveArrayTools", "Reexport", "Requires", "StaticArrays", "TaylorSeries"]
+git-tree-sha1 = "b7af537b6fefba170e3cc36de26d0c2da3124ffd"
+uuid = "92b13dbe-c966-51a2-8445-caca9f8a7d42"
+version = "0.8.9"
+
+[[TaylorModels]]
+deps = ["IntervalArithmetic", "IntervalRootFinding", "LinearAlgebra", "Markdown", "Random", "RecipesBase", "Reexport", "TaylorIntegration", "TaylorSeries"]
+git-tree-sha1 = "274e1cc5ea6708596156cedef8287449485f7fcb"
+uuid = "314ce334-5f6e-57ae-acf6-00b6e903104a"
+version = "0.4.2"
+
+[[TaylorSeries]]
+deps = ["LinearAlgebra", "Markdown", "Requires", "SparseArrays"]
+git-tree-sha1 = "59ee6d7175a204013d91ad84e55eed1e772e01bd"
+uuid = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
+version = "0.11.2"
+
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -1765,6 +2093,12 @@ deps = ["ManualMemory"]
 git-tree-sha1 = "03013c6ae7f1824131b2ae2fc1d49793b51e8394"
 uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
 version = "0.4.6"
+
+[[TimeZones]]
+deps = ["Dates", "Future", "LazyArtifacts", "Mocking", "Pkg", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "6c9040665b2da00d30143261aea22c7427aada1c"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.5.7"
 
 [[TimerOutputs]]
 deps = ["ExprTools", "Printf"]
@@ -1776,6 +2110,12 @@ version = "0.5.12"
 git-tree-sha1 = "0952c9cee34988092d73a5708780b3917166a0dd"
 uuid = "0796e94c-ce3b-5d07-9a54-7f471281c624"
 version = "0.5.21"
+
+[[TranscodingStreams]]
+deps = ["Random", "Test"]
+git-tree-sha1 = "216b95ea110b5972db65aa90f88d8d89dcb8851c"
+uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
+version = "0.9.6"
 
 [[TreeViews]]
 deps = ["Test"]
@@ -2070,6 +2410,13 @@ version = "0.9.1+5"
 # ╠═60b13469-ef77-4df5-9080-d75d768f1195
 # ╟─a9776dd4-a461-402f-a6cb-9a92c27122fc
 # ╠═2aff66ca-1504-465b-bf40-93c777432800
+# ╟─4aba4714-4bce-46f9-9e51-81397042c2ec
+# ╟─467b8efe-6009-4f8e-bcaf-3f795ac98694
+# ╟─8101681a-771f-44e7-ae20-4fc77cb92bf5
+# ╠═721766a4-d140-47f1-9a4e-5890a815c67c
+# ╠═fa720640-a9c1-4368-869f-16f8a40d5245
+# ╟─154d3832-edc1-4b95-b793-3d7e7f3abcc4
+# ╟─9af50a35-279e-41ac-91bd-05e25243fb9a
 # ╟─b7fb6868-0f5d-46b7-8987-c5e98a44b282
 # ╟─a82a7267-4467-4613-afbf-f768fe50657b
 # ╠═f4e67586-4fdd-4fa3-9b55-5174345cb5eb
