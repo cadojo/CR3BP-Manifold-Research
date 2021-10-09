@@ -8,16 +8,22 @@
 # Earth-Moon, Sun-Mars, and Sun-Jupiter systems.
 #
 
-using DrWatson; @quickactivate "Halo-Explorations"
+using DrWatson; @quickactivate "CR3BP-Manifold-Research"
 
 using CSV
 using DataFrames
-using UnitfulAstrodynamics
+using GeneralAstrodynamics
 
 massparameters = let 
     planets = (Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)
-    planet_params = map(planet->nondimensionalize(mass_parameter(Sun), mass_parameter(planet)), planets)
-    earth_moon    = nondimensionalize(mass_parameter(Earth), mass_parameter(Moon))
+    planet_params = map(
+        planet -> let μ₁=massparameter(Sun), μ₂=massparameter(planet)
+            min(μ₁, μ₂) / (μ₁+μ₂)    
+        end, planets
+    )
+    earth_moon  = let μ₁=massparameter(Earth), μ₂=massparameter(Moon)
+        min(μ₁, μ₂) / (μ₁+μ₂) 
+    end
     vcat(planet_params[1:2]..., earth_moon, planet_params[3:end]...)
 end
 
@@ -43,7 +49,7 @@ Threads.@threads for i = 1:length(names)
         for Az ∈ amplitudes
             fail_count < 10 || break
             r, v, T = halo(μ; Az = Az, L = L, max_iter=20, nan_on_fail=true, disable_warnings=true);
-            if T ≥ one(T) && all(el->!isnan(el), r) && all(el->!isnan(el), v) && isperiodic(CircularRestrictedThreeBodyOrbit(r,v,μ), T)
+            if T ≥ one(T) && all(el->!isnan(el), r) && all(el->!isnan(el), v) && isperiodic(CR3BPOrbit(CartesianState(r,v),μ), T)
                 push!(orbits, (μ, L, Az, jacobi_constant(r, v, μ), T, r..., v...))
             else
                 fail_count += 1
@@ -54,7 +60,7 @@ Threads.@threads for i = 1:length(names)
     CSV.write(datadir("exp_pro", "halos", lowercase(string(name,"-Halos.csv"))), orbits)
 end
 
-open(datadir("exp_pro", "halos", "README.md"), "w") do io
+open(datadir("processed", "halos", "README.md"), "w") do io
     write(io, 
     """
     # How are the Halo CSV files formatted?
